@@ -1,0 +1,57 @@
+# FastAPI Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.9
+
+# Database
+sqlalchemy==2.0.25
+asyncpg==0.29.0
+psycopg2-binary==2.9.9
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt==4.1.2
+
+# AI & Computer Vision
+ultralytics==8.1.0
+opencv-python==4.9.0.80
+Pillow==10.2.0
+numpy==1.26.3
+
+# Speech Recognition
+openai-whisper==20250625
+
+# Google AI
+google-generativeai==0.3.2
+
+# Geospatial
+geopy==2.4.1
+geohash2==1.1
+
+# HTTP Client
+httpx==0.24.1
+aiohttp==3.9.1
+
+# Supabase
+supabase==2.0.3
+postgrest==0.13.0
+
+# Validation
+pydantic==2.5.3
+pydantic-settings==2.1.0
+email-validator==2.1.0
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+pytest-cov==4.1.0
+
+# Utilities
+python-dotenv==1.0.0
+loguru==0.7.2
+python-dateutil==2.8.2
+
+# Build Tools (Prevents pkg_resources error)
+setuptools>=65.0
+wheel>=0.40.0
