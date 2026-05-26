@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadGuardian AI - Premium Citizen Safety Dashboard</title>
+    
+    <!-- Google Fonts & Leaflet CSS -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    
+    <!-- External Vanilla Style Sheet -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Background Gradient Glows -->
+    <div class="glow glow-1"></div>
+    <div class="glow glow-2"></div>
+
+    <!-- Main Navigation Header -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="brand">
+                <div class="logo-icon">🛡️</div>
+                <div class="brand-text">
+                    <h1>RoadGuardian AI</h1>
+                    <span class="sub-brand">Citizen Reporting & Analytics</span>
+                </div>
+            </div>
+            
+            <div id="user-profile-badge" class="profile-badge-container logged-out">
+                <div class="guest-mode">Guest Mode</div>
+                <div class="user-info">
+                    <span id="user-display-name" class="user-name">Loading...</span>
+                    <span id="user-display-points" class="user-points">0 pts</span>
+                    <span id="user-display-role" class="user-role">Citizen</span>
+                </div>
+                <button id="logout-btn" class="logout-action-btn">Sign Out</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="dashboard-grid">
+        <!-- LEFT COLUMN: Forms, Reporting, Auth -->
+        <section class="control-column">
+            
+            <!-- CARD 1: Authentic Portal (Tabs for Login / Register) -->
+            <div id="auth-card" class="glass-card card-auth">
+                <div class="tab-header">
+                    <button id="tab-login" class="tab-btn active">Sign In</button>
+                    <button id="tab-register" class="tab-btn">Register</button>
+                </div>
+                
+                <div class="tab-contents">
+                    <!-- Login Form -->
+                    <form id="login-form" class="form-container active">
+                        <div class="input-group">
+                            <label for="login-email">Email Address</label>
+                            <input type="email" id="login-email" required placeholder="name@domain.com">
+                        </div>
+                        <div class="input-group">
+                            <label for="login-password">Password</label>
+                            <input type="password" id="login-password" required placeholder="••••••••">
+                        </div>
+                        <button type="submit" class="action-submit-btn">Sign In</button>
+                    </form>
+
+                    <!-- Register Form -->
+                    <form id="register-form" class="form-container">
+                        <div class="input-group">
+                            <label for="reg-name">Full Name</label>
+                            <input type="text" id="reg-name" required placeholder="John Doe">
+                        </div>
+                        <div class="input-group">
+                            <label for="reg-email">Email Address</label>
+                            <input type="email" id="reg-email" required placeholder="name@domain.com">
+                        </div>
+                        <div class="input-group">
+                            <label for="reg-password">Password</label>
+                            <input type="password" id="reg-password" required placeholder="••••••••">
+                        </div>
+                        <button type="submit" class="action-submit-btn">Create Account</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- CARD 2: Submit Road Hazard (Visible only when logged in) -->
+            <div id="reporting-card" class="glass-card card-reporting locked">
+                <div class="card-lock-overlay">
+                    <div class="lock-icon">🔒</div>
+                    <h3>Sign In to Report Hazards</h3>
+                    <p>Earn up to 100 points per verified report to unlock platform achievements.</p>
+                </div>
+
+                <div class="card-header">
+                    <div class="card-icon">⚡</div>
+                    <h2>Report Infrastructure Hazard</h2>
+                </div>
+                
+                <form id="hazard-report-form" class="report-form" enctype="multipart/form-data">
+                    <div class="input-group">
+                        <label for="hz-image">Upload Hazard Proof (Image)</label>
+                        <div class="file-dropzone">
+                            <input type="file" id="hz-image" required accept="image/*">
+                            <span class="file-message">📸 Click to choose or drop image</span>
+                        </div>
+                    </div>
+
+                    <div class="row-inputs">
+                        <div class="input-group">
+                            <label for="hz-type">Hazard Classification</label>
+                            <select id="hz-type" required>
+                                <option value="pothole">Pothole</option>
+                                <option value="crack">Crack / Fissure</option>
+                                <option value="waterlogging">Waterlogging</option>
+                                <option value="broken_dividers">Broken Dividers</option>
+                                <option value="missing_signs">Missing Signs</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="row-inputs">
+                        <div class="input-group">
+                            <label for="hz-lat">Latitude</label>
+                            <input type="number" id="hz-lat" step="0.000001" min="-90" max="90" required placeholder="e.g. 13.0827">
+                        </div>
+                        <div class="input-group">
+                            <label for="hz-lng">Longitude</label>
+                            <input type="number" id="hz-lng" step="0.000001" min="-180" max="180" required placeholder="e.g. 80.2707">
+                        </div>
+                        <button type="button" id="locate-btn" class="gps-locate-btn" title="Get current coordinates">📍 GPS</button>
+                    </div>
+
+                    <div class="input-group">
+                        <label for="hz-desc">Details / Comments</label>
+                        <textarea id="hz-desc" rows="3" placeholder="Describe the size, lane location, traffic impact..."></textarea>
+                    </div>
+
+                    <button type="submit" class="action-submit-btn report-submit-btn">📤 Dispatch Report</button>
+                </form>
+
+                <div class="voice-divider">
+                    <span>or report via speech</span>
+                </div>
+
+                <!-- Voice Recording Section -->
+                <div class="voice-reporting-container">
+                    <button id="voice-record-btn" class="voice-mic-btn">
+                        <span class="mic-icon">🎙️</span>
+                    </button>
+                    <div class="voice-status-panel">
+                        <span id="voice-status-text" class="voice-status">Tap mic to record audio report</span>
+                        <div id="voice-waves" class="voice-waves-container">
+                            <span class="wave"></span>
+                            <span class="wave"></span>
+                            <span class="wave"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 3: Severity Estimator Sandbox -->
+            <div class="glass-card card-estimator">
+                <div class="card-header">
+                    <div class="card-icon">🎛️</div>
+                    <h2>Severity Calculation Sandbox</h2>
+                </div>
+                
+                <form id="estimator-form" class="estimator-form">
+                    <div class="row-inputs">
+                        <div class="input-group">
+                            <label for="est-type">Hazard Category</label>
+                            <select id="est-type">
+                                <option value="pothole">Pothole</option>
+                                <option value="crack">Crack</option>
+                                <option value="waterlogging">Waterlogging</option>
+                                <option value="broken_dividers">Broken Dividers</option>
+                                <option value="missing_signs">Missing Signs</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="est-conf">AI Confidence</label>
+                            <input type="number" id="est-conf" min="0" max="1" step="0.01" value="0.90">
+                        </div>
+                    </div>
+
+                    <div class="row-inputs">
+                        <div class="input-group">
+                            <label for="est-traffic">Traffic Density</label>
+                            <select id="est-traffic">
+                                <option value="low">Low Impact</option>
+                                <option value="medium">Medium Impact</option>
+                                <option value="high">High Impact</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label for="est-weather">Weather</label>
+                            <select id="est-weather">
+                                <option value="clear">Clear Skies</option>
+                                <option value="fog">Fog / Mist</option>
+                                <option value="rain">Heavy Rains</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="action-submit-btn secondary-btn">📊 Simulate Calculations</button>
+                </form>
+
+                <div id="estimator-result" class="estimator-result-container hidden">
+                    <div class="result-score-block">
+                        <span class="score-label">Severity Score</span>
+                        <span id="est-res-score" class="score-value">0.0</span>
+                        <span id="est-res-urgency" class="urgency-badge">LOW</span>
+                    </div>
+                    <div class="result-explanation">
+                        <p id="est-res-exp">Calculation breakdown details will render here...</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- RIGHT COLUMN: Analytics, Map, Feeds -->
+        <section class="display-column">
+            
+            <!-- Real-time Analytics Cards Grid -->
+            <div class="analytics-row">
+                <div class="stats-card">
+                    <div class="stat-icon yellow">🛡️</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Total Submissions</span>
+                        <span id="stat-total" class="stat-number">0</span>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stat-icon red">🚨</div>
+                    <div class="stat-info">
+                        <span class="stat-label">High Urgency</span>
+                        <span id="stat-critical" class="stat-number">0</span>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stat-icon blue">🔄</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Pending Verifies</span>
+                        <span id="stat-pending" class="stat-number">0</span>
+                    </div>
+                </div>
+                <div class="stats-card">
+                    <div class="stat-icon green">✅</div>
+                    <div class="stat-info">
+                        <span class="stat-label">Resolved Issues</span>
+                        <span id="stat-resolved" class="stat-number">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 4: Interactive Heatmap GIS Plot -->
+            <div class="glass-card card-map">
+                <div class="card-header">
+                    <div class="card-icon">🗺️</div>
+                    <h2>Real-Time Spatial Hazards Heatmap</h2>
+                    <span class="pulse-indicator">● LIVE</span>
+                </div>
+                
+                <div class="map-wrapper">
+                    <div id="map"></div>
+                </div>
+                
+                <div class="map-legend">
+                    <span class="legend-item"><span class="color-dot pothole"></span> Pothole</span>
+                    <span class="legend-item"><span class="color-dot crack"></span> Crack</span>
+                    <span class="legend-item"><span class="color-dot water"></span> Waterlogging</span>
+                    <span class="legend-item"><span class="color-dot divider"></span> Dividers</span>
+                    <span class="legend-item"><span class="color-dot sign"></span> Missing Signs</span>
+                </div>
+            </div>
+
+            <!-- Tabbed View: Live Feed & User Submissions -->
+            <div class="glass-card card-feeds">
+                <div class="feed-tabs">
+                    <button id="feed-tab-recent" class="feed-tab-btn active">🛡️ Live Global Reports</button>
+                    <button id="feed-tab-my" class="feed-tab-btn">📋 My Submissions</button>
+                </div>
+
+                <div class="feed-container">
+                    <!-- Recent global items list -->
+                    <div id="recent-reports-feed" class="feed-list active">
+                        <div class="empty-state">No hazard reports found in the system.</div>
+                    </div>
+
+                    <!-- User specific reports list -->
+                    <div id="my-reports-feed" class="feed-list">
+                        <div class="empty-state">No hazard reports found in the system.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Citizen Profile Badges / Achievements Drawer -->
+            <div id="badges-card" class="glass-card card-badges hidden">
+                <div class="card-header">
+                    <div class="card-icon">🏆</div>
+                    <h2>Unlocked Citizen Achievements</h2>
+                </div>
+                
+                <div id="badges-list" class="badges-flex-container">
+                    <!-- Badges populated here -->
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- Leaflet.js & Vanilla App Logic Script -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="app.js"></script>
+</body>
+</html>

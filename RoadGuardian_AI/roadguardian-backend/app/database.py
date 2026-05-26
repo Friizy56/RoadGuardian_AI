@@ -30,14 +30,25 @@ def get_async_db_url(url: str) -> str:
 # ======================
 # Engine Initialization with Fallback
 # ======================
+import socket
+from urllib.parse import urlparse
+
 USE_MOCK_DB = False
 
 try:
-    # Try Supabase/PostgreSQL first
     async_url = get_async_db_url(settings.DATABASE_URL)
     if not async_url:
         raise ValueError("DATABASE_URL is empty")
         
+    # Synchronously verify DNS resolution before engine creation
+    parsed = urlparse(async_url)
+    host = parsed.hostname
+    if not host:
+        raise ValueError("Host not specified in DATABASE_URL")
+        
+    # Perform standard DNS resolution check
+    socket.gethostbyname(host)
+    
     engine = create_async_engine(
         async_url,
         echo=settings.DEBUG,
@@ -46,7 +57,7 @@ try:
     logger.info("✅ Connected to PostgreSQL (Supabase)")
 except Exception as e:
     # Fallback to SQLite for local development
-    logger.warning(f"️ Cloud DB connection failed: {e}")
+    logger.warning(f"⚠️ Cloud DB connection pre-check failed: {e}")
     logger.warning("🔄 Falling back to local SQLite database...")
     engine = create_async_engine(
         "sqlite+aiosqlite:///./roadguardian_dev.db",
