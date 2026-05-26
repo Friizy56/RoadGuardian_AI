@@ -15,7 +15,11 @@ from app.schemas.hazard import (
     HeatmapClusterResponse,
     DashboardAnalyticsResponse,
     SeverityScoreResponse,
-    BadgeResponse
+    BadgeResponse,
+    HotspotPrediction,
+    HotspotsResponse,
+    RecurringPattern,
+    RecurringPatternsResponse
 )
 
 __all__ = [
@@ -29,5 +33,9 @@ __all__ = [
     "HeatmapClusterResponse",
     "DashboardAnalyticsResponse",
     "SeverityScoreResponse",
-    "BadgeResponse"
+    "BadgeResponse",
+    "HotspotPrediction",
+    "HotspotsResponse",
+    "RecurringPattern",
+    "RecurringPatternsResponse"
 ]

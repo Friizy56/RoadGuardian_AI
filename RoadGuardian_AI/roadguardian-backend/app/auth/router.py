@@ -36,6 +36,7 @@ class UserResponse(BaseModel):
     email: str
     full_name: str | None = None
     points: int = 0
+    role: str = "citizen"
     
     class Config:
         from_attributes = True

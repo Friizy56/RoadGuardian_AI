@@ -93,15 +93,22 @@ class HazardResponse(BaseModel):
     description: Optional[str] = Field(None, description="Text description or transcipt associated with report")
     created_at: datetime = Field(..., description="Submission timestamp")
     resolved_at: Optional[datetime] = Field(None, description="Timestamp when the hazard was marked resolved")
+    assigned_to: Optional[str] = Field(None, description="Name of the assigned repair crew")
+    assigned_at: Optional[datetime] = Field(None, description="Timestamp when the crew was assigned")
+    resolved_image_url: Optional[str] = Field(None, description="URL of the resolution proof image")
+    resolution_notes: Optional[str] = Field(None, description="Resolution notes explaining reparation")
+    resolved_by_id: Optional[int] = Field(None, description="User ID of the authority who resolved the report")
+    resolved_by_name: Optional[str] = Field(None, description="Name of the authority who resolved the report")
     reporter_name: Optional[str] = Field(None, description="Full name or credential of the reporting user")
 
     @model_validator(mode="before")
     @classmethod
-    def resolve_reporter_name(cls, data: Any) -> Any:
+    def resolve_relations(cls, data: Any) -> Any:
         """
-        ORM validator resolving the computed `reporter_name` parameter from 
-        the associated `User` model relationship if present.
+        ORM validator resolving the computed `reporter_name` and `resolved_by_name`
+        parameters from their associated `User` model relationships if present.
         """
+        # Resolve reporter_name
         if isinstance(data, dict):
             user = data.get("user")
             if user:
@@ -109,14 +116,26 @@ class HazardResponse(BaseModel):
                     data["reporter_name"] = user.get("full_name") or user.get("email")
                 else:
                     data["reporter_name"] = getattr(user, "full_name", None) or getattr(user, "email", None)
+            
+            resolved_by = data.get("resolved_by")
+            if resolved_by:
+                if isinstance(resolved_by, dict):
+                    data["resolved_by_name"] = resolved_by.get("full_name") or resolved_by.get("email")
+                else:
+                    data["resolved_by_name"] = getattr(resolved_by, "full_name", None) or getattr(resolved_by, "email", None)
         else:
             user = getattr(data, "user", None)
             if user:
-                # Set dynamic attribute on the ORM object model or mapped proxy
                 try:
                     data.reporter_name = getattr(user, "full_name", None) or getattr(user, "email", None)
                 except AttributeError:
-                    # Fallback if object is immutable read-only
+                    pass
+            
+            resolved_by = getattr(data, "resolved_by", None)
+            if resolved_by:
+                try:
+                    data.resolved_by_name = getattr(resolved_by, "full_name", None) or getattr(resolved_by, "email", None)
+                except AttributeError:
                     pass
         return data
 
@@ -163,3 +182,46 @@ class BadgeResponse(BaseModel):
     points_awarded: int = Field(..., description="Points rewarded to the user for this achievement")
     description: str = Field(..., description="Details and milestones completed for this badge")
     earned_at: datetime = Field(..., description="Earned timestamp")
+
+
+class HotspotPrediction(BaseModel):
+    """Schema representing a single predicted high-risk grid hotspot"""
+    model_config = ConfigDict(from_attributes=True)
+
+    latitude: float = Field(..., description="Calculated center latitude coordinate of the prediction zone")
+    longitude: float = Field(..., description="Calculated center longitude coordinate of the prediction zone")
+    risk_level: str = Field(..., description="Predicted hazard risk density level: high or medium")
+    expected_hazards_per_week: float = Field(..., description="Estimated new hazard occurrences expected per week")
+    peak_time_hour: int = Field(..., description="Forecasted daily peak occurrence hour of day (0 to 23)")
+    avg_severity: float = Field(..., description="Forecasted average severity of issues in the zone")
+    common_type: HazardType = Field(..., description="Most common hazard classification inside this zone")
+
+
+class HotspotsResponse(BaseModel):
+    """Schema representing complete spatial-temporal hotspots predictions"""
+    model_config = ConfigDict(from_attributes=True)
+
+    predicted_hotspots: List[HotspotPrediction] = Field(..., description="List of predicted hotspot grids")
+    confidence: float = Field(..., description="Calculated forecasting confidence index (0.0 to 1.0)")
+    analysis_period_days: int = Field(..., description="Total lookback timeframe in days analyzed")
+    total_hazards_analyzed: int = Field(..., description="Total number of records consumed by the analysis")
+
+
+class RecurringPattern(BaseModel):
+    """Schema representing a repeating hazard occurrence cluster"""
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int = Field(..., description="Primary seed hazard ID forming the recurrence cluster")
+    type: HazardType = Field(..., description="Type of repeating hazard")
+    latitude: float = Field(..., description="Latitude coordinate of repeating issue")
+    longitude: float = Field(..., description="Longitude coordinate of repeating issue")
+    recurrence_count: int = Field(..., description="Total number of times this issue has recurring reports")
+    first_seen: datetime = Field(..., description="First reported timestamp of this issue")
+    last_seen: datetime = Field(..., description="Last reported timestamp of this issue")
+
+
+class RecurringPatternsResponse(BaseModel):
+    """Schema representing recurring hazard patterns response"""
+    model_config = ConfigDict(from_attributes=True)
+
+    recurring_hazards: List[RecurringPattern] = Field(..., description="Top recurring hazard patterns detected")

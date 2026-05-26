@@ -11,8 +11,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     
-    <!-- External Vanilla Style Sheet -->
+    <!-- External Vanilla Style Sheet & PWA Manifest -->
     <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
+    
+    <!-- Mobile PWA Meta Capabilities -->
+    <meta name="theme-color" content="#1a1a2e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="RoadGuardian">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
 </head>
 <body>
     <!-- Background Gradient Glows -->
@@ -283,6 +291,7 @@
                 <div class="feed-tabs">
                     <button id="feed-tab-recent" class="feed-tab-btn active">🛡️ Live Global Reports</button>
                     <button id="feed-tab-my" class="feed-tab-btn">📋 My Submissions</button>
+                    <button id="feed-tab-authority" class="feed-tab-btn hidden">🧑‍✈️ Authority Review</button>
                 </div>
 
                 <div class="feed-container">
@@ -294,6 +303,27 @@
                     <!-- User specific reports list -->
                     <div id="my-reports-feed" class="feed-list">
                         <div class="empty-state">No hazard reports found in the system.</div>
+                    </div>
+
+                    <!-- Authority pending review list -->
+                    <div id="authority-reports-feed" class="feed-list">
+                        <div class="authority-sub-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 0.5rem;">
+                            <button id="auth-sub-tab-pending" class="feed-tab-btn active" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">⏳ Pending Review</button>
+                            <button id="auth-sub-tab-active" class="feed-tab-btn" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;">🚛 Active Crews</button>
+                        </div>
+                        <div id="auth-pending-section" class="auth-section active">
+                            <div class="bulk-verify-bar hidden" style="margin-bottom: 0.8rem;">
+                                <button id="bulk-verify-btn" class="verify-action-btn bulk-btn">✓ Verify Checked Reports</button>
+                            </div>
+                            <div id="authority-pending-list" class="feed-list active">
+                                <div class="empty-state">No pending reports for review. All clear!</div>
+                            </div>
+                        </div>
+                        <div id="auth-active-section" class="auth-section" style="display: none;">
+                            <div id="authority-active-list" class="feed-list">
+                                <div class="empty-state">No active crew dispatches found.</div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -312,6 +342,69 @@
 
         </section>
     </main>
+
+    <!-- Glassmorphic Crew Resolution Proof Modal -->
+    <div id="resolve-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-card">
+            <button id="close-resolve-modal" class="close-modal-btn">&times;</button>
+            <div class="card-header">
+                <div class="card-icon">🚛</div>
+                <h2>Submit Crew Resolution Proof</h2>
+            </div>
+            <form id="resolve-hazard-form" enctype="multipart/form-data">
+                <input type="hidden" id="resolve-hazard-id">
+                <div class="input-group">
+                    <label for="res-proof-image">Upload Repaired Proof (Image)</label>
+                    <div class="file-dropzone">
+                        <input type="file" id="res-proof-image" required accept="image/*">
+                        <span class="file-message">📸 Choose completed road repair image</span>
+                    </div>
+                </div>
+                <div class="input-group" style="margin-top: 1rem;">
+                    <label for="res-notes">Resolution Notes / Comments</label>
+                    <textarea id="res-notes" rows="3" required placeholder="Detail the repairs, materials used, crew names..."></textarea>
+                </div>
+                <button type="submit" class="action-submit-btn" style="margin-top: 1.2rem;">✓ Submit Proof & Resolve</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Glassmorphic Before/After Slider Modal -->
+    <div id="comparison-modal" class="modal-overlay hidden">
+        <div class="modal-content glass-card comparison-modal-content">
+            <button id="close-comparison-modal" class="close-modal-btn">&times;</button>
+            <div class="card-header">
+                <div class="card-icon">⚡</div>
+                <h2>Road Reparation Comparison</h2>
+            </div>
+            
+            <!-- Draggable Split Slider Viewport -->
+            <div class="slider-viewport">
+                <div class="before-image-container">
+                    <img id="slider-before-img" src="" alt="Before Repaired Road">
+                    <span class="slider-label label-before">BEFORE (HAZARD)</span>
+                </div>
+                <div class="after-image-container">
+                    <img id="slider-after-img" src="" alt="After Repaired Road">
+                    <span class="slider-label label-after">AFTER (REPAIRED)</span>
+                </div>
+                <div class="slider-handle">
+                    <div class="slider-arrow arrow-left">&larr;</div>
+                    <div class="slider-bar"></div>
+                    <div class="slider-arrow arrow-right">&rarr;</div>
+                </div>
+            </div>
+
+            <div class="comparison-details" style="margin-top: 1.2rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 1rem;">
+                <h3 id="comp-type" style="color: #3b82f6; font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Pothole Resolution</h3>
+                <p id="comp-notes" style="color: #cbd5e1; font-size: 0.9rem; line-height: 1.5; margin-bottom: 0.8rem;">Resolution notes will populate here...</p>
+                <div class="comp-meta" style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #94a3b8;">
+                    <span id="comp-resolved-by">Resolved by: Officer Bobby</span>
+                    <span id="comp-resolved-at">Date: May 27, 2026</span>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Leaflet.js & Vanilla App Logic Script -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>

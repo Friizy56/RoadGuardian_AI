@@ -18,6 +18,7 @@ from geopy.geocoders import Nominatim
 from geopy.exc import GeopyError
 
 from app.models.hazard import Hazard, User, GamificationBadge
+from app.services.weather_service import WeatherService, TrafficService
 
 logger = logging.getLogger(__name__)
 
@@ -108,15 +109,27 @@ class HazardService:
                 traffic_mod = 2.0
             elif td == "medium":
                 traffic_mod = 1.0
+            elif td == "low":
+                traffic_mod = 0.0
                 
         # Weather modifier adjustments
         weather_mod = 0.0
         if weather:
             w = str(weather).lower()
-            if w in ["rain", "raining", "heavy_snow"]:
-                weather_mod = 2.0
-            elif w in ["fog", "foggy", "mist"]:
-                weather_mod = 1.0
+            modifiers = {
+                'rain': 2.0,
+                'raining': 2.0,
+                'drizzle': 1.5,
+                'thunderstorm': 2.5,
+                'fog': 1.0,
+                'foggy': 1.0,
+                'mist': 1.0,
+                'snow': 1.5,
+                'heavy_snow': 1.5,
+                'clear': 0.0,
+                'clouds': 0.5
+            }
+            weather_mod = modifiers.get(w, 0.0)
                 
         # Aggregate raw metrics
         raw_score = scaled + traffic_mod + weather_mod
@@ -167,15 +180,19 @@ class HazardService:
         longitude = data.get("longitude")
         description = data.get("description")
         confidence_score = data.get("confidence_score", 1.0)
-        traffic_density = data.get("traffic_density")
-        weather = data.get("weather")
+        # Query live dynamic weather condition and traffic density at exact coordinate
+        weather_info = await WeatherService.get_weather_condition(latitude, longitude)
+        traffic_info = await TrafficService.get_traffic_density(latitude, longitude)
         
-        # Calculate severity metadata
+        resolved_weather = weather_info.get("condition", "clear")
+        resolved_traffic = traffic_info.get("density", "low")
+        
+        # Calculate severity metadata based on live resolved variables
         severity_data = await cls.calculate_severity_score(
             hazard_type=hazard_type,
             confidence=confidence_score,
-            traffic_density=traffic_density,
-            weather=weather
+            traffic_density=resolved_traffic,
+            weather=resolved_weather
         )
         
         # Resolve address description from coordinates
@@ -204,7 +221,7 @@ class HazardService:
         stmt = (
             select(Hazard)
             .where(Hazard.id == new_hazard.id)
-            .options(selectinload(Hazard.user))
+            .options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
         )
         res = await db.execute(stmt)
         return res.scalar_one()
@@ -323,7 +340,7 @@ class HazardService:
             select(Hazard)
             .order_by(Hazard.created_at.desc())
             .limit(5)
-            .options(selectinload(Hazard.user))
+            .options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
         )
         recent_res = await db.execute(recent_stmt)
         recent_hazards = recent_res.scalars().all()

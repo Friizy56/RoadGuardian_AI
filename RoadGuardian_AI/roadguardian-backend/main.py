@@ -1,6 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -11,6 +11,7 @@ import uvicorn
 from app.config import settings
 from app.database import init_db, get_db
 from app.auth import auth_router
+from app.utils.websocket import manager
 
 # Configure logging
 logging.basicConfig(level=settings.LOG_LEVEL)
@@ -81,6 +82,18 @@ try:
     logger.info("✅ Hazards router loaded successfully.")
 except (ImportError, AttributeError):
     logger.warning("⚠️ Hazards router (app.routes.hazards) not found or unimplemented. Skipping inclusion.")
+
+
+# WebSocket endpoint route for real-time updates
+@app.websocket("/ws/hazards")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
 
 
 # Mount the web application static files

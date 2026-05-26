@@ -62,6 +62,7 @@ class Settings(BaseSettings):
     YOLO_MODEL_PATH: str = "models/yolov8n.pt"
     WHISPER_API_KEY: str = ""
     GEMINI_API_KEY: str = ""
+    OPENWEATHER_API_KEY: str = ""
     
     # ======================
     # Storage Configuration

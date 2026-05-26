@@ -24,6 +24,7 @@ from app.database import get_db
 from app.auth.dependencies import get_current_user
 from app.models.hazard import User, Hazard
 from app.services.hazard_service import HazardService
+from app.services.prediction_service import PredictionService
 from app.schemas.hazard import (
     HazardStatus,
     HazardType,
@@ -33,7 +34,9 @@ from app.schemas.hazard import (
     HazardResponse,
     HeatmapClusterResponse,
     DashboardAnalyticsResponse,
-    SeverityScoreResponse
+    SeverityScoreResponse,
+    HotspotsResponse,
+    RecurringPatternsResponse
 )
 
 logger = logging.getLogger(__name__)
@@ -153,6 +156,18 @@ async def upload_hazard(
         image_url=relative_url
     )
 
+    # Broadcast new hazard creation to all connected WebSocket clients
+    try:
+        import json
+        from app.utils.websocket import manager
+        hazard_resp = HazardResponse.model_validate(new_hazard)
+        await manager.broadcast({
+            "type": "new_hazard",
+            "data": json.loads(hazard_resp.model_dump_json())
+        })
+    except Exception as ws_err:
+        logger.warning(f"⚠️ Failed to broadcast new hazard WebSocket update: {ws_err}")
+
     return new_hazard
 
 
@@ -232,6 +247,18 @@ async def upload_voice_hazard(
         image_url=None  # Voice reports do not initially contain visual assets
     )
 
+    # Broadcast new voice hazard creation to all connected WebSocket clients
+    try:
+        import json
+        from app.utils.websocket import manager
+        hazard_resp = HazardResponse.model_validate(new_hazard)
+        await manager.broadcast({
+            "type": "new_hazard",
+            "data": json.loads(hazard_resp.model_dump_json())
+        })
+    except Exception as ws_err:
+        logger.warning(f"⚠️ Failed to broadcast voice report WebSocket update: {ws_err}")
+
     # Clean up local audio file after transaction succeeds to free disk space
     try:
         if os.path.exists(filepath):
@@ -302,7 +329,7 @@ async def get_my_reports(
     stmt = (
         select(Hazard)
         .where(Hazard.user_id == current_user.id)
-        .options(selectinload(Hazard.user))
+        .options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
         .order_by(Hazard.created_at.desc())
     )
     res = await db.execute(stmt)
@@ -332,7 +359,7 @@ async def update_hazard_status(
     stmt = (
         select(Hazard)
         .where(Hazard.id == hazard_id)
-        .options(selectinload(Hazard.user))
+        .options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
     )
     res = await db.execute(stmt)
     hazard = res.scalar_one_or_none()
@@ -346,6 +373,10 @@ async def update_hazard_status(
     # Trigger point increments and badge rewards on transitioning to 'verified' status
     if payload.status == HazardStatus.verified and hazard.status != "verified":
         await HazardService.process_verified_report(db, hazard.id)
+        # Re-fetch from db to populate user relationship fully
+        stmt_refetch = select(Hazard).where(Hazard.id == hazard.id).options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
+        res_refetch = await db.execute(stmt_refetch)
+        hazard = res_refetch.scalar_one()
     else:
         # Standard updates for resolved or rejected status transitions
         hazard.status = payload.status.value
@@ -354,4 +385,309 @@ async def update_hazard_status(
         await db.commit()
         await db.refresh(hazard)
 
+    # Broadcast hazard status update to all connected WebSocket clients
+    try:
+        import json
+        from app.utils.websocket import manager
+        hazard_resp = HazardResponse.model_validate(hazard)
+        await manager.broadcast({
+            "type": "status_update",
+            "data": json.loads(hazard_resp.model_dump_json())
+        })
+    except Exception as ws_err:
+        logger.warning(f"⚠️ Failed to broadcast hazard status WebSocket update: {ws_err}")
+
     return hazard
+
+
+# ==========================================
+# Authority Dashboard Endpoints
+# ==========================================
+
+class AssignCrewRequest(BaseModel):
+    crew_name: str
+
+
+@router.get("/authority/pending", response_model=List[HazardResponse])
+async def get_pending_hazards(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all pending hazards for authority review, sorted by severity score descending"""
+    if current_user.role not in ["authority", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authority access required"
+        )
+    
+    result = await db.execute(
+        select(Hazard)
+        .where(Hazard.status == "pending")
+        .order_by(Hazard.severity_score.desc())
+        .options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
+    )
+    return result.scalars().all()
+
+
+@router.post("/authority/verify-bulk")
+async def verify_multiple_hazards(
+    hazard_ids: List[int],
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Bulk verify hazards and broadcast WebSocket status updates"""
+    if current_user.role not in ["authority", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authority access required"
+        )
+    
+    verified_count = 0
+    for hazard_id in hazard_ids:
+        result = await db.execute(select(Hazard).where(Hazard.id == hazard_id))
+        hazard = result.scalar_one_or_none()
+        if hazard and hazard.status == "pending":
+            verified_count += 1
+            # Award badge to reporter and update status
+            await HazardService.process_verified_report(db, hazard_id)
+            
+            # Broadcast the updated status over WebSockets
+            try:
+                import json
+                from app.utils.websocket import manager
+                # Refetch to obtain loaded relationship properties
+                stmt = select(Hazard).where(Hazard.id == hazard_id).options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
+                res = await db.execute(stmt)
+                updated_hazard = res.scalar_one()
+                hazard_resp = HazardResponse.model_validate(updated_hazard)
+                await manager.broadcast({
+                    "type": "status_update",
+                    "data": json.loads(hazard_resp.model_dump_json())
+                })
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to broadcast bulk verification update: {e}")
+                
+    await db.commit()
+    return {"verified_count": verified_count}
+
+
+@router.post("/authority/assign/{hazard_id}")
+async def assign_to_crew(
+    hazard_id: int,
+    payload: AssignCrewRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Assign hazard to repair crew, verify the report if pending, and notify clients"""
+    if current_user.role not in ["authority", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authority access required"
+        )
+        
+    result = await db.execute(
+        select(Hazard)
+        .where(Hazard.id == hazard_id)
+        .options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
+    )
+    hazard = result.scalar_one_or_none()
+    
+    if not hazard:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Hazard not found"
+        )
+    
+    # Store assignment in database model
+    hazard.assigned_to = payload.crew_name
+    hazard.assigned_at = datetime.utcnow()
+    
+    # Transition status to verified if it was pending
+    was_pending = hazard.status == "pending"
+    if was_pending:
+        hazard.status = "verified"
+        try:
+            await HazardService.process_verified_report(db, hazard_id)
+            # Re-fetch from db to populate user relationship fully
+            stmt_refetch = select(Hazard).where(Hazard.id == hazard_id).options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
+            res_refetch = await db.execute(stmt_refetch)
+            hazard = res_refetch.scalar_one()
+        except Exception as e:
+            logger.warning(f"⚠️ Failed to allocate verified rewards during assignment: {e}")
+    else:
+        await db.commit()
+        await db.refresh(hazard)
+    
+    # Broadcast updated state over WebSockets
+    try:
+        import json
+        from app.utils.websocket import manager
+        hazard_resp = HazardResponse.model_validate(hazard)
+        await manager.broadcast({
+            "type": "status_update",
+            "data": json.loads(hazard_resp.model_dump_json())
+        })
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to broadcast assignment socket update: {e}")
+        
+    return {
+        "message": f"Hazard #{hazard_id} successfully assigned to {payload.crew_name}",
+        "hazard_id": hazard_id,
+        "assigned_to": payload.crew_name,
+        "status": hazard.status
+    }
+
+
+@router.get("/authority/active", response_model=List[HazardResponse])
+async def get_active_hazards(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all verified/assigned but not yet resolved hazards for authority action"""
+    if current_user.role not in ["authority", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authority access required"
+        )
+    
+    result = await db.execute(
+        select(Hazard)
+        .where(Hazard.status == "verified")
+        .where(Hazard.assigned_to != None)
+        .order_by(Hazard.assigned_at.desc())
+        .options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
+    )
+    return result.scalars().all()
+
+
+@router.post("/authority/resolve/{hazard_id}", response_model=HazardResponse)
+async def resolve_hazard(
+    hazard_id: int,
+    resolved_image: UploadFile = File(..., description="Proof image of the resolved/repaired hazard"),
+    resolution_notes: Optional[str] = Form(None, description="Detailed notes about the resolution"),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Submits a resolution proof for a hazard.
+    Saves the resolution proof image, records resolution notes, and updates status to 'resolved'.
+    Restricted to authority/admin accounts.
+    """
+    if current_user.role not in ["authority", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authority access required"
+        )
+        
+    stmt = (
+        select(Hazard)
+        .where(Hazard.id == hazard_id)
+        .options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
+    )
+    res = await db.execute(stmt)
+    hazard = res.scalar_one_or_none()
+    
+    if not hazard:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Hazard not found"
+        )
+        
+    # Save the resolved image
+    orig_ext = os.path.splitext(resolved_image.filename)[1] or ".jpg"
+    filename = f"resolved_{hazard_id}_{int(time.time())}{orig_ext}"
+    filepath = os.path.join(UPLOAD_DIR, filename)
+    
+    try:
+        with open(filepath, "wb") as buffer:
+            shutil.copyfileobj(resolved_image.file, buffer)
+    except Exception as e:
+        logger.error(f"Failed to save resolved proof image: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not write file to local disk storage."
+        )
+        
+    hazard.resolved_image_url = f"/uploads/{filename}"
+    hazard.resolution_notes = resolution_notes
+    hazard.resolved_by_id = current_user.id
+    hazard.resolved_by = current_user  # Force immediate ORM in-memory mapping to bypass cache
+    hazard.resolved_at = datetime.utcnow()
+    
+    was_pending = hazard.status == "pending"
+    hazard.status = "resolved"
+    
+    # Save basic hazard fields first
+    await db.commit()
+    
+    if was_pending:
+        try:
+            # Award points and verified hero badge
+            await HazardService.process_verified_report(db, hazard_id)
+            # Re-fetch and re-assert status is resolved (since process_verified_report overrides status to verified)
+            hazard.status = "resolved"
+            await db.commit()
+        except Exception as e:
+            logger.warning(f"Failed to allocate verified rewards during direct resolution: {e}")
+            
+    # Re-fetch to populate all relationships fully including resolved_by
+    stmt_refetch = (
+        select(Hazard)
+        .where(Hazard.id == hazard_id)
+        .options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
+    )
+    res_refetch = await db.execute(stmt_refetch)
+    hazard = res_refetch.scalar_one()
+    
+    # Broadcast updated status over WebSockets
+    try:
+        import json
+        from app.utils.websocket import manager
+        hazard_resp = HazardResponse.model_validate(hazard)
+        await manager.broadcast({
+            "type": "status_update",
+            "data": json.loads(hazard_resp.model_dump_json())
+        })
+    except Exception as e:
+        logger.warning(f"Failed to broadcast resolution update: {e}")
+        
+    return hazard
+
+
+@router.get("/predictions/hotspots", response_model=HotspotsResponse)
+async def get_predicted_hotspots(
+    days_lookback: int = 30,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Predict high-risk hazard zones based on historical spatial clusters.
+    Restricted to authority/admin roles.
+    """
+    if current_user.role not in ["authority", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authority access required"
+        )
+    
+    result = await PredictionService.predict_hotspots(db, days_lookback)
+    return result
+
+
+@router.get("/predictions/recurring", response_model=RecurringPatternsResponse)
+async def get_recurring_patterns(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Find recurring hazard patterns (e.g., same pothole reappears).
+    Restricted to authority/admin roles.
+    """
+    if current_user.role not in ["authority", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authority access required"
+        )
+    
+    result = await PredictionService.get_recurring_patterns(db)
+    return result
