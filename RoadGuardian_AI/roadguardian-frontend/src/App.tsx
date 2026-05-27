@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, ReactNode } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
@@ -26,14 +26,21 @@ const queryClient = new QueryClient({
   },
 });
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+  const { isAuthenticated, isInitialized } = useAuthStore();
+  
+  if (!isInitialized) return <div className="flex h-screen w-full items-center justify-center text-primary animate-pulse font-bold text-xl">Loading Session...</div>;
   if (!isAuthenticated) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
 function App() {
   const theme = useUiStore((state) => state.theme);
+  const initializeAuth = useAuthStore((state) => state.initializeAuth);
+
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
 
   useEffect(() => {
     if (theme === 'dark') {

@@ -1,88 +1,113 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { supabase } from '@/lib/supabase';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuthStore } from '@/store/authStore';
+import { Navigate, Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-const registerSchema = z.object({
-  fullName: z.string().min(2, "Full name must be at least 2 characters"),
-  email: z.string().email("Invalid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(['citizen', 'authority']),
-});
-
 export const Register = () => {
-  const navigate = useNavigate();
-  const { setAuth } = useAuthStore();
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<z.infer<typeof registerSchema>>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: {
-      role: 'citizen',
-    }
-  });
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
-  const onSubmit = async (data: z.infer<typeof registerSchema>) => {
-    try {
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
-      setAuth(
-        { id: '2', fullName: data.fullName, email: data.email, role: data.role as any, points: 0, badges: [] },
-        'mock-jwt-token'
-      );
-      toast.success('Registration successful!');
-      navigate('/dashboard');
-    } catch (err) {
-      toast.error('Registration failed');
+  const handleGoogleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: window.location.origin + '/dashboard',
+      }
+    });
+  };
+
+  const handleEmailRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: fullName,
+        }
+      }
+    });
+    
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success('Registration successful! Check your email to verify your account.');
     }
+    setLoading(false);
   };
 
   return (
     <div className="flex items-center justify-center min-h-[80vh]">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Create an Account</CardTitle>
-          <p className="text-sm text-muted-foreground">Join RoadGuardian AI to make roads safer</p>
+          <CardTitle className="text-2xl">Join RoadGuardian AI</CardTitle>
+          <p className="text-sm text-muted-foreground">Create an account to help fix your city.</p>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <CardContent className="space-y-4">
+          <Button onClick={handleGoogleLogin} className="w-full h-12 text-lg font-semibold bg-white text-black hover:bg-gray-200">
+            <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 mr-3" />
+            Register with Google
+          </Button>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <span className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="bg-card px-2 text-muted-foreground">Or register with email</span>
+            </div>
+          </div>
+
+          <form onSubmit={handleEmailRegister} className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Full Name</label>
-              <Input placeholder="John Doe" {...register('fullName')} />
-              {errors.fullName && <p className="text-sm text-destructive">{errors.fullName.message}</p>}
+              <Input 
+                type="text" 
+                placeholder="John Doe" 
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                required
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Email</label>
-              <Input type="email" placeholder="john@example.com" {...register('email')} />
-              {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
+              <Input 
+                type="email" 
+                placeholder="citizen@example.com" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Password</label>
-              <Input type="password" {...register('password')} />
-              {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
+              <Input 
+                type="password" 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+              />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Account Type</label>
-              <select 
-                {...register('role')}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              >
-                <option value="citizen">Citizen Reporter</option>
-                <option value="authority">Authority / Admin</option>
-              </select>
-              {errors.role && <p className="text-sm text-destructive">{errors.role.message}</p>}
-            </div>
-            <Button type="submit" className="w-full" disabled={isSubmitting}>
-              {isSubmitting ? 'Registering...' : 'Register'}
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Registering...' : 'Register'}
             </Button>
           </form>
+
           <div className="mt-4 text-center text-sm">
-            Already have an account? <Link to="/login" className="text-primary hover:underline">Sign In</Link>
+            Already have an account? <Link to="/login" className="text-primary hover:underline">Log in</Link>
           </div>
         </CardContent>
       </Card>
