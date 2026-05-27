@@ -2,8 +2,12 @@ import asyncio
 import httpx
 import os
 import time
-import sqlite3
 from datetime import datetime
+
+from sqlalchemy import select
+
+from app.database import async_session_factory
+from app.models.hazard import User
 
 API_URL = "http://127.0.0.1:8000"
 
@@ -74,13 +78,13 @@ async def run_prediction_tests():
         )
         assert reg_auth_resp.status_code == 201
         
-        # Elevate to 'authority' in SQLite
+        # Elevate to 'authority' in Postgres via the app's async session
         print("[DB] Elevating Officer Bobby to authority...")
-        conn = sqlite3.connect("roadguardian_dev.db")
-        cursor = conn.cursor()
-        cursor.execute("UPDATE users SET role = 'authority' WHERE email = ?", (authority_email,))
-        conn.commit()
-        conn.close()
+        async with async_session_factory() as session:
+            result = await session.execute(select(User).where(User.email == authority_email))
+            user = result.scalar_one()
+            user.role = "authority"
+            await session.commit()
         print("[OK] Role updated in database.")
         
         # Login Authority

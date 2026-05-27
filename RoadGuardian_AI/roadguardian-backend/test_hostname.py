@@ -1,25 +1,24 @@
 import socket
 
-# This is the hostname that is currently failing.
-# You MUST replace this with the correct one from your Supabase dashboard.
+# This is the Supabase database host used by the application.
 HOSTNAME_TO_TEST = "db.puxreqmxvmdoypaltwpq.supabase.co"
+
 
 def test_hostname_resolution():
     """
-    Tests if a given hostname can be resolved to an IP address.
-    This is the most basic network check.
+    Tests whether a hostname can be resolved to one or more IP addresses.
+    This supports both IPv4 and IPv6 resolution.
     """
     print(f"Attempting to resolve hostname: {HOSTNAME_TO_TEST}")
     try:
-        # Try to get the IP address for the hostname
-        ip_address = socket.gethostbyname(HOSTNAME_TO_TEST)
-        print(f"✅ SUCCESS: Hostname resolved to IP address: {ip_address}")
-        print("This means the hostname is correct and reachable.")
-    except socket.gaierror:
-        # This is the exact error your application is getting (getaddrinfo failed)
-        print(f"❌ FAILURE: Could not resolve hostname '{HOSTNAME_TO_TEST}'.")
-        print("This confirms the hostname is WRONG.")
-        print("Please go to your Supabase project's database settings and copy the correct host.")
+        results = socket.getaddrinfo(HOSTNAME_TO_TEST, 5432)
+        addresses = sorted({result[4][0] for result in results})
+        print(f"✅ SUCCESS: Hostname resolved to: {', '.join(addresses)}")
+        print("This means the hostname is valid and DNS resolution is working.")
+    except socket.gaierror as exc:
+        print(f"❌ FAILURE: Could not resolve hostname '{HOSTNAME_TO_TEST}': {exc}")
+        print("This indicates a DNS or network issue, not necessarily an incorrect hostname.")
+        print("Check IPv6 connectivity, DNS configuration, or your network path to Supabase.")
 
 if __name__ == "__main__":
     test_hostname_resolution()

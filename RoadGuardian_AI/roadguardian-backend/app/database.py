@@ -1,13 +1,12 @@
 """
 Module 2: Database Connection & Session Management
 ===================================================
-Purpose: Async PostgreSQL connection via SQLAlchemy with automatic SQLite fallback.
+Purpose: Async PostgreSQL connection via SQLAlchemy.
 """
 
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
-import os
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy.orm import DeclarativeBase
@@ -28,42 +27,19 @@ def get_async_db_url(url: str) -> str:
     return url
 
 # ======================
-# Engine Initialization with Fallback
+# Engine Initialization
 # ======================
-import socket
-from urllib.parse import urlparse
 
-USE_MOCK_DB = False
+async_url = get_async_db_url(settings.DATABASE_URL)
+if not async_url:
+    raise ValueError("DATABASE_URL is empty")
 
-try:
-    async_url = get_async_db_url(settings.DATABASE_URL)
-    if not async_url:
-        raise ValueError("DATABASE_URL is empty")
-        
-    # Synchronously verify DNS resolution before engine creation
-    parsed = urlparse(async_url)
-    host = parsed.hostname
-    if not host:
-        raise ValueError("Host not specified in DATABASE_URL")
-        
-    # Perform standard DNS resolution check
-    socket.gethostbyname(host)
-    
-    engine = create_async_engine(
-        async_url,
-        echo=settings.DEBUG,
-        pool_pre_ping=True,
-    )
-    logger.info("✅ Connected to PostgreSQL (Supabase)")
-except Exception as e:
-    # Fallback to SQLite for local development
-    logger.warning(f"⚠️ Cloud DB connection pre-check failed: {e}")
-    logger.warning("🔄 Falling back to local SQLite database...")
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///./roadguardian_dev.db",
-        echo=settings.DEBUG,
-    )
-    USE_MOCK_DB = True
+engine = create_async_engine(
+    async_url,
+    echo=settings.DEBUG,
+    pool_pre_ping=True,
+)
+logger.info("✅ Connected to PostgreSQL (Supabase)")
 
 async_session_factory = async_sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
@@ -126,9 +102,4 @@ async def init_db() -> None:
         logger.info("✅ Database tables created successfully (if they didn't exist).")
     except Exception as e:
         logger.error(f"❌ CRITICAL: Could not create database tables: {e}")
-        # We still have the fallback to SQLite, but table creation might fail there too.
-        # If the primary DB connection fails, the fallback logic in this file handles it.
-        # This part specifically handles failure during the table creation step.
-        if "getaddrinfo failed" in str(e):
-            logger.error("   Hint: This is a network issue. The database host is unreachable.")
         raise
