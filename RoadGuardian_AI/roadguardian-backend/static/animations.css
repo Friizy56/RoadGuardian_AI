@@ -1,0 +1,582 @@
+/* ============================================
+   RoadGuardian AI - Purposeful Animations
+   ============================================ */
+
+:root {
+    --ease-road: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-pulse: cubic-bezier(0.4, 0, 0.6, 1);
+}
+
+/* ============================================
+   1. ASPHALT REVEAL
+   Elements emerge like lane markings ahead
+   ============================================ */
+
+@keyframes asphaltReveal {
+    0% {
+        opacity: 0;
+        transform: translateY(30px);
+        filter: blur(8px);
+    }
+    30% {
+        opacity: 0.3;
+        transform: translateY(10px);
+        filter: blur(3px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+@keyframes asphaltRevealLeft {
+    0% {
+        opacity: 0;
+        transform: translateX(-40px);
+        filter: blur(8px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+        filter: blur(0);
+    }
+}
+
+@keyframes asphaltRevealRight {
+    0% {
+        opacity: 0;
+        transform: translateX(40px);
+        filter: blur(8px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+        filter: blur(0);
+    }
+}
+
+@keyframes drawRoadLine {
+    0% {
+        stroke-dashoffset: 200;
+        opacity: 0;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        stroke-dashoffset: 0;
+        opacity: 1;
+    }
+}
+
+.hero-copy .eyebrow {
+    animation: asphaltRevealLeft 0.72s var(--ease-road) both;
+}
+
+.hero-copy h1 {
+    animation: asphaltReveal 0.8s var(--ease-road) 0.08s both;
+}
+
+.hero-copy .hero-text {
+    animation: asphaltReveal 0.8s var(--ease-road) 0.18s both;
+}
+
+.hero-actions {
+    animation: asphaltReveal 0.8s var(--ease-road) 0.3s both;
+}
+
+.hero-signal {
+    animation: asphaltRevealRight 0.8s var(--ease-road) 0.2s both;
+}
+
+.preview-panel .panel-head,
+.feature-card,
+.impact-card,
+.auth-panel,
+.trust-pill {
+    animation: asphaltReveal 0.7s var(--ease-road) both;
+}
+
+.feature-card:nth-child(1),
+.impact-card:nth-child(1),
+.trust-pill:nth-child(1) {
+    animation-delay: 0.05s;
+}
+
+.feature-card:nth-child(2),
+.impact-card:nth-child(2),
+.trust-pill:nth-child(2) {
+    animation-delay: 0.12s;
+}
+
+.feature-card:nth-child(3),
+.impact-card:nth-child(3),
+.trust-pill:nth-child(3) {
+    animation-delay: 0.18s;
+}
+
+.hero-card::after,
+.preview-panel::after {
+    content: "";
+    position: absolute;
+    inset: auto 24px 18px 24px;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(10, 92, 142, 0.55), rgba(43, 147, 72, 0.55), transparent);
+    background-size: 200% 100%;
+    animation: drawRoadLine 1.3s var(--ease-road) both;
+    pointer-events: none;
+    border-radius: 999px;
+}
+
+/* ============================================
+   2. HAZARD PULSE
+   Emergency warning emphasis
+   ============================================ */
+
+@keyframes hazardPulse {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+    }
+    50% {
+        transform: scale(1.03);
+        box-shadow: 0 0 0 15px rgba(220, 38, 38, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+    }
+}
+
+@keyframes hazardPulseOrange {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(232, 93, 4, 0.7);
+    }
+    50% {
+        transform: scale(1.03);
+        box-shadow: 0 0 0 15px rgba(232, 93, 4, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(232, 93, 4, 0);
+    }
+}
+
+@keyframes hazardPulseYellow {
+    0% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+    }
+    50% {
+        transform: scale(1.03);
+        box-shadow: 0 0 0 15px rgba(245, 158, 11, 0);
+    }
+    100% {
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
+    }
+}
+
+@keyframes emergencyBlink {
+    0%,
+    100% {
+        background-color: var(--safety-red);
+        opacity: 1;
+    }
+    50% {
+        background-color: var(--safety-red);
+        opacity: 0.4;
+    }
+}
+
+.hazard-card.critical,
+.feed-card.critical {
+    animation: hazardPulse 2s infinite;
+}
+
+.hazard-card.high,
+.feed-card.high {
+    animation: hazardPulseOrange 2s infinite;
+}
+
+.hazard-card.medium,
+.feed-card.medium {
+    animation: hazardPulseYellow 2s infinite;
+}
+
+.toast.error .toast-indicator,
+.toast.warning .toast-indicator {
+    animation: emergencyBlink 1.2s ease-in-out infinite;
+}
+
+/* ============================================
+   3. ROUTE DRAW
+   GPS-style route and marker motion
+   ============================================ */
+
+@keyframes routeDraw {
+    0% {
+        stroke-dasharray: 1000;
+        stroke-dashoffset: 1000;
+    }
+    100% {
+        stroke-dasharray: 1000;
+        stroke-dashoffset: 0;
+    }
+}
+
+@keyframes markerDrop {
+    0% {
+        transform: translateY(-100px) rotate(-10deg);
+        opacity: 0;
+    }
+    60% {
+        transform: translateY(10px) rotate(2deg);
+    }
+    100% {
+        transform: translateY(0) rotate(0);
+        opacity: 1;
+    }
+}
+
+.marker-animate {
+    animation: markerDrop 0.5s var(--ease-road) forwards;
+}
+
+.route-line {
+    animation: routeDraw 1.1s var(--ease-road) forwards;
+}
+
+/* ============================================
+   4. SHIELD DROP
+   Award badges falling into place
+   ============================================ */
+
+@keyframes shieldDrop {
+    0% {
+        transform: translateY(-60px) scale(0.5);
+        opacity: 0;
+        filter: blur(4px);
+    }
+    50% {
+        transform: translateY(10px) scale(1.08);
+    }
+    100% {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+        filter: blur(0);
+    }
+}
+
+@keyframes shieldGlow {
+    0%,
+    100% {
+        filter: drop-shadow(0 0 0px gold);
+    }
+    50% {
+        filter: drop-shadow(0 0 12px gold);
+    }
+}
+
+.badge-earned,
+.badge-item {
+    animation: shieldDrop 0.6s var(--ease-road) both;
+}
+
+.badge-earned {
+    animation-name: shieldDrop, shieldGlow;
+    animation-duration: 0.6s, 1s;
+    animation-delay: 0s, 0.5s;
+    animation-timing-function: var(--ease-road), ease-in-out;
+    animation-fill-mode: both, both;
+}
+
+/* ============================================
+   5. TRAFFIC LIGHT STATUS
+   Progress states for queues and resolution
+   ============================================ */
+
+@keyframes trafficLightPending {
+    0% {
+        background-color: #F59E0B;
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+    }
+    100% {
+        background-color: #F59E0B;
+        box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+    }
+}
+
+@keyframes trafficLightVerified {
+    0% {
+        background-color: #0A5C8E;
+        box-shadow: 0 0 0 0 rgba(10, 92, 142, 0.4);
+    }
+    100% {
+        background-color: #0A5C8E;
+        box-shadow: 0 0 0 8px rgba(10, 92, 142, 0);
+    }
+}
+
+@keyframes trafficLightResolved {
+    0% {
+        background-color: #2B9348;
+        box-shadow: 0 0 0 0 rgba(43, 147, 72, 0.4);
+    }
+    100% {
+        background-color: #2B9348;
+        box-shadow: 0 0 0 8px rgba(43, 147, 72, 0);
+    }
+}
+
+.status-change-pending,
+.feed-status-badge.pending,
+.urgency-badge.medium {
+    animation: trafficLightPending 0.6s ease-out;
+}
+
+.status-change-verified,
+.feed-status-badge.verified {
+    animation: trafficLightVerified 0.6s ease-out;
+}
+
+.status-change-resolved,
+.feed-status-badge.resolved,
+.feed-status-badge.closed {
+    animation: trafficLightResolved 0.6s ease-out;
+}
+
+/* ============================================
+   6. ROAD DASH LOADER
+   Dashed progress instead of a spinning loader
+   ============================================ */
+
+@keyframes roadDashLoader {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 40px 0;
+    }
+}
+
+.road-loader {
+    width: 60px;
+    height: 4px;
+    background: repeating-linear-gradient(
+        90deg,
+        var(--safety-yellow),
+        var(--safety-yellow) 10px,
+        transparent 10px,
+        transparent 20px
+    );
+    animation: roadDashLoader 1s linear infinite;
+    border-radius: 0;
+}
+
+.btn-loading {
+    position: relative;
+    color: transparent !important;
+}
+
+.btn-loading::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 30px;
+    height: 3px;
+    background: repeating-linear-gradient(
+        90deg,
+        white,
+        white 8px,
+        transparent 8px,
+        transparent 16px
+    );
+    animation: roadDashLoader 0.8s linear infinite;
+}
+
+/* ============================================
+   7. COUNT-UP ANIMATION
+   Stats rising like odometer ticks
+   ============================================ */
+
+@keyframes countUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.stat-number {
+    display: inline-block;
+    animation: countUp 0.6s var(--ease-road);
+}
+
+/* ============================================
+   8. SCAN LINE EFFECT
+   Radar-like AI detection sweep
+   ============================================ */
+
+@keyframes scanLine {
+    0% {
+        transform: translateY(-100%);
+    }
+    100% {
+        transform: translateY(100%);
+    }
+}
+
+.scan-effect {
+    position: relative;
+    overflow: hidden;
+}
+
+.scan-effect::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: linear-gradient(90deg, transparent, var(--safety-yellow), transparent);
+    animation: scanLine 2s ease-in-out infinite;
+    pointer-events: none;
+}
+
+/* ============================================
+   9. ROAD RIPPLE
+   New hazard alert impact ring
+   ============================================ */
+
+@keyframes roadRipple {
+    0% {
+        transform: scale(0);
+        opacity: 0.8;
+    }
+    100% {
+        transform: scale(4);
+        opacity: 0;
+    }
+}
+
+.ripple-effect {
+    position: absolute;
+    border-radius: 50%;
+    background: rgba(232, 93, 4, 0.5);
+    animation: roadRipple 1s ease-out;
+    pointer-events: none;
+}
+
+/* ============================================
+   10. PARALLAX ROAD
+   Subtle moving markings in the hero area
+   ============================================ */
+
+@keyframes parallaxRoad {
+    0% {
+        background-position: 0 0;
+    }
+    100% {
+        background-position: 100px 0;
+    }
+}
+
+.hero-card,
+.hero-stage,
+.landing-shell {
+    position: relative;
+}
+
+.hero-card {
+    overflow: hidden;
+}
+
+.hero-card::before {
+    content: "";
+    position: absolute;
+    inset: auto 0 0;
+    height: 80px;
+    background: repeating-linear-gradient(
+        90deg,
+        transparent,
+        transparent 40px,
+        rgba(255, 255, 255, 0.14) 40px,
+        rgba(255, 255, 255, 0.14) 60px
+    );
+    animation: parallaxRoad 20s linear infinite;
+    pointer-events: none;
+}
+
+/* ============================================
+   11. TOAST SLIDE
+   Road-sign style notifications
+   ============================================ */
+
+@keyframes toastSlideIn {
+    0% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+@keyframes toastSlideOut {
+    0% {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    100% {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+}
+
+.toast {
+    animation: toastSlideIn 0.3s var(--ease-road) forwards;
+}
+
+.toast.hiding {
+    animation: toastSlideOut 0.3s var(--ease-road) forwards;
+}
+
+/* ============================================
+   12. PAGE TRANSITIONS
+   Moving to the next road segment
+   ============================================ */
+
+@keyframes pageEnter {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.page-transition {
+    animation: pageEnter 0.4s var(--ease-road);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

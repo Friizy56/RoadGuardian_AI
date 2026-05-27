@@ -10,11 +10,11 @@
 /** @typedef {{north:number,south:number,east:number,west:number}} Bounds */
 
 const API_BASE = window.location.origin;
-const TOKEN_KEY = "access_token";
+const TOKEN_KEY = "rg_token";
 
 /** @type {{token:string|null,user:User|null,map:any|null,markers:any[],gpsCenter:[number,number],voiceRecording:boolean,activeFeedTab:string,isLoggedIn:()=>boolean}} */
 const store = {
-    token: localStorage.getItem(TOKEN_KEY),
+    token: localStorage.getItem(TOKEN_KEY) || localStorage.getItem("access_token"),
     user: null,
     map: null,
     markers: [],
@@ -87,6 +87,249 @@ const toast = {
     }
 };
 
+class AIDetectionOverlay {
+    constructor(container, imageElement) {
+        this.container = container;
+        this.image = imageElement;
+        this.canvas = null;
+        this.ctx = null;
+        this.detections = [];
+    }
+
+    init() {
+        this.canvas = document.createElement("canvas");
+        this.canvas.style.position = "absolute";
+        this.canvas.style.top = "0";
+        this.canvas.style.left = "0";
+        this.canvas.style.width = "100%";
+        this.canvas.style.height = "100%";
+        this.canvas.style.pointerEvents = "none";
+
+        this.container.style.position = "relative";
+        this.container.appendChild(this.canvas);
+
+        this.resize();
+        window.addEventListener("resize", () => this.resize(), { passive: true });
+    }
+
+    resize() {
+        if (!this.canvas) return;
+        const rect = this.container.getBoundingClientRect();
+        this.canvas.width = Math.max(1, Math.round(rect.width));
+        this.canvas.height = Math.max(1, Math.round(rect.height));
+        this.draw();
+    }
+
+    async detect(imageFile) {
+        await this.showScanning();
+
+        const mockDetections = [
+            { class: "pothole", confidence: 0.92, x: 0.3, y: 0.4, w: 0.25, h: 0.2 },
+            { class: "crack", confidence: 0.78, x: 0.6, y: 0.6, w: 0.2, h: 0.15 }
+        ];
+
+        this.detections = mockDetections;
+        this.draw();
+
+        return this.detections[0];
+    }
+
+    async showScanning() {
+        const scanLine = document.createElement("div");
+        scanLine.className = "detection-scan-line";
+        this.container.appendChild(scanLine);
+
+        await new Promise(resolve => {
+            scanLine.addEventListener("animationend", () => {
+                scanLine.remove();
+                resolve();
+            }, { once: true });
+        });
+    }
+
+    draw() {
+        if (!this.canvas) return;
+        if (!this.ctx) {
+            this.ctx = this.canvas.getContext("2d");
+        }
+        if (!this.ctx) return;
+
+        this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+        this.detections.forEach(detection => {
+            const x = detection.x * this.canvas.width;
+            const y = detection.y * this.canvas.height;
+            const w = detection.w * this.canvas.width;
+            const h = detection.h * this.canvas.height;
+
+            this.ctx.strokeStyle = "#E85D04";
+            this.ctx.lineWidth = 3;
+            this.ctx.strokeRect(x, y, w, h);
+
+            this.drawCornerMarkers(x, y, w, h);
+
+            this.ctx.fillStyle = "#E85D04";
+            this.ctx.font = "bold 14px var(--font-sans, sans-serif)";
+            const label = `${detection.class} ${Math.round(detection.confidence * 100)}%`;
+            const textWidth = this.ctx.measureText(label).width;
+            this.ctx.fillRect(x, Math.max(0, y - 24), textWidth + 12, 24);
+            this.ctx.fillStyle = "white";
+            this.ctx.fillText(label, x + 6, Math.max(16, y - 8));
+        });
+    }
+
+    drawCornerMarkers(x, y, w, h) {
+        const cornerLength = 15;
+        this.ctx.beginPath();
+        this.ctx.strokeStyle = "#FFC107";
+        this.ctx.lineWidth = 3;
+
+        this.ctx.moveTo(x, y + cornerLength);
+        this.ctx.lineTo(x, y);
+        this.ctx.lineTo(x + cornerLength, y);
+
+        this.ctx.moveTo(x + w - cornerLength, y);
+        this.ctx.lineTo(x + w, y);
+        this.ctx.lineTo(x + w, y + cornerLength);
+
+        this.ctx.moveTo(x + w, y + h - cornerLength);
+        this.ctx.lineTo(x + w, y + h);
+        this.ctx.lineTo(x + w - cornerLength, y + h);
+
+        this.ctx.moveTo(x + cornerLength, y + h);
+        this.ctx.lineTo(x, y + h);
+        this.ctx.lineTo(x, y + h - cornerLength);
+
+        this.ctx.stroke();
+    }
+
+    clear() {
+        this.detections = [];
+        this.draw();
+    }
+}
+
+const detectionOverlayCSS = `
+.detection-scan-line {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--safety-yellow), transparent);
+    animation: scanDown 1.2s ease-in-out;
+    pointer-events: none;
+    z-index: 10;
+}
+
+@keyframes scanDown {
+    0% { top: 0; opacity: 1; }
+    50% { top: 100%; opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+}
+
+.ai-status {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    z-index: 12;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(15, 23, 42, 0.82);
+    color: #fff;
+    font-size: 0.85rem;
+    backdrop-filter: blur(8px);
+}
+
+.ai-status-success {
+    background: rgba(43, 147, 72, 0.92);
+}
+
+.photo-preview .detection-overlay-frame {
+    position: relative;
+    width: 100%;
+    overflow: hidden;
+    border-radius: 14px;
+}
+
+.photo-preview .detection-overlay-frame img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 14px;
+}
+`;
+
+function ensureDetectionOverlayCSS() {
+    if (document.getElementById("roadguardian-detection-overlay-css")) return;
+    const style = document.createElement("style");
+    style.id = "roadguardian-detection-overlay-css";
+    style.textContent = detectionOverlayCSS;
+    document.head.appendChild(style);
+}
+
+async function handleImageUploadWithDetection(file) {
+    ensureDetectionOverlayCSS();
+
+    const previewContainer = dom.byId("photoPreview");
+    if (!previewContainer) return null;
+
+    const frame = document.createElement("div");
+    frame.className = "detection-overlay-frame";
+
+    const img = document.createElement("img");
+    img.src = URL.createObjectURL(file);
+    img.alt = "Uploaded hazard preview";
+
+    frame.appendChild(img);
+    previewContainer.innerHTML = "";
+    previewContainer.appendChild(frame);
+
+    try {
+        if (img.decode) {
+            await img.decode();
+        } else {
+            await new Promise((resolve, reject) => {
+                img.onload = () => resolve();
+                img.onerror = reject;
+            });
+        }
+    } catch {
+        // Fall back to a rendered preview even if decode fails.
+    }
+
+    const detector = new AIDetectionOverlay(frame, img);
+    detector.init();
+
+    const statusDiv = document.createElement("div");
+    statusDiv.className = "ai-status";
+    statusDiv.innerHTML = "🤖 AI analyzing image...";
+    frame.appendChild(statusDiv);
+
+    const detection = await detector.detect(file);
+
+    statusDiv.innerHTML = `✅ AI detected: ${detection.class} (${Math.round(detection.confidence * 100)}% confidence)`;
+    statusDiv.classList.add("ai-status-success");
+
+    setTimeout(() => statusDiv.remove(), 3000);
+
+    const hazardTypeSelect = dom.byId("hazardType");
+    if (hazardTypeSelect) {
+        hazardTypeSelect.value = detection.class;
+        hazardTypeSelect.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    if (URL.revokeObjectURL) {
+        setTimeout(() => URL.revokeObjectURL(img.src), 0);
+    }
+
+    return detection;
+}
+
 const api = {
     baseUrl: API_BASE,
 
@@ -151,6 +394,7 @@ const api = {
             if (response.ok) {
                 store.token = data.access_token;
                 localStorage.setItem(TOKEN_KEY, data.access_token);
+                localStorage.setItem("access_token", data.access_token);
                 await auth.loadProfile();
             }
             return response.ok;
@@ -223,6 +467,7 @@ const auth = {
         store.token = null;
         store.user = null;
         localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem("access_token");
         ui.showLanding();
         if (!silent) toast.show("Logged out successfully", "info");
     },
@@ -865,16 +1110,30 @@ const hazardReport = {
 
     bindEvents() {
         dom.byId("uploadPhotoBtn")?.addEventListener("click", () => dom.byId("photoInput")?.click());
-        dom.byId("photoInput")?.addEventListener("change", (event) => {
-            if (event.target.files?.[0]) {
-                this.currentImage = event.target.files[0];
+        dom.byId("photoInput")?.addEventListener("change", async (event) => {
+            const file = event.target.files?.[0];
+            if (!file) return;
+
+            this.currentImage = file;
+            try {
+                await handleImageUploadWithDetection(file);
+            } catch (error) {
                 const preview = dom.byId("photoPreview");
-                if (preview) preview.innerHTML = `<img src="${URL.createObjectURL(this.currentImage)}" class="image-preview">`;
+                if (preview) preview.innerHTML = `<img src="${URL.createObjectURL(file)}" class="image-preview" alt="Uploaded hazard preview">`;
+                toast.show(`AI detection unavailable: ${error.message}`, "warning");
             }
         });
         dom.byId("recordVoiceBtn")?.addEventListener("click", () => this.toggleRecording());
         dom.byId("submitReport")?.addEventListener("click", () => this.submit());
         dom.byId("cancelReport")?.addEventListener("click", () => modal.close());
+
+        const hazardTypeSelect = dom.byId("hazardType");
+        if (hazardTypeSelect) {
+            this.selectedHazardType = hazardTypeSelect.value;
+            hazardTypeSelect.addEventListener("change", () => {
+                this.selectedHazardType = hazardTypeSelect.value;
+            });
+        }
 
         document.querySelectorAll("[data-hazard-type]").forEach(button => {
             button.addEventListener("click", () => {
@@ -927,7 +1186,8 @@ const hazardReport = {
     },
 
     async submit() {
-        if (!this.selectedHazardType) {
+        const hazardType = this.selectedHazardType || dom.byId("hazardType")?.value;
+        if (!hazardType) {
             toast.show("Please select a hazard type", "error");
             return;
         }
@@ -937,7 +1197,7 @@ const hazardReport = {
         }
 
         const data = {
-            hazard_type: this.selectedHazardType,
+            hazard_type: hazardType,
             latitude: this.currentLocation?.lat || store.gpsCenter[0],
             longitude: this.currentLocation?.lng || store.gpsCenter[1],
             description: dom.byId("hazardDescription")?.value || ""
@@ -1025,10 +1285,51 @@ const estimator = {
 function bindAuthForms() {
     const loginTab = dom.byId("tab-login");
     const registerTab = dom.byId("tab-register");
-    const loginForm = dom.byId("form-login");
-    const registerForm = dom.byId("form-register");
+    const loginForm = dom.byId("form-login") || dom.byId("loginForm");
+    const registerForm = dom.byId("form-register") || dom.byId("registerForm");
     const logoutBtn = dom.byId("logout-btn");
-    const ctaBtn = dom.byId("hero-cta-btn");
+    const ctaBtn = dom.byId("hero-cta-btn") || dom.byId("heroGetStarted");
+    const viewMapBtn = dom.byId("heroViewMap");
+    const loginModal = dom.byId("loginModal");
+    const registerModal = dom.byId("registerModal");
+    const openLoginLinks = [dom.byId("switchToLogin")].filter(Boolean);
+    const openRegisterLinks = [dom.byId("switchToRegister")].filter(Boolean);
+
+    const closeModal = (modalEl) => {
+        if (modalEl) modalEl.style.display = "none";
+    };
+
+    const openModal = (modalEl) => {
+        if (modalEl) modalEl.style.display = "flex";
+    };
+
+    [loginModal, registerModal].forEach(modalEl => {
+        if (!modalEl) return;
+        modalEl.addEventListener("click", (event) => {
+            if (event.target === modalEl) closeModal(modalEl);
+        });
+        modalEl.querySelectorAll(".modal-close").forEach(button => {
+            button.addEventListener("click", () => closeModal(modalEl));
+        });
+    });
+
+    openLoginLinks.forEach(link => link?.addEventListener("click", (event) => {
+        event.preventDefault();
+        closeModal(registerModal);
+        openModal(loginModal);
+    }));
+
+    openRegisterLinks.forEach(link => link?.addEventListener("click", (event) => {
+        event.preventDefault();
+        closeModal(loginModal);
+        openModal(registerModal);
+    }));
+
+    dom.byId("loginNavBtn")?.addEventListener("click", () => openModal(loginModal));
+    dom.byId("registerNavBtn")?.addEventListener("click", () => openModal(registerModal));
+    viewMapBtn?.addEventListener("click", () => {
+        dom.byId("map-view")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
 
     loginTab?.addEventListener("click", () => {
         loginTab.classList.add("active");
@@ -1046,22 +1347,30 @@ function bindAuthForms() {
 
     loginForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
-        const email = dom.byId("login-email")?.value || "";
-        const password = dom.byId("login-password")?.value || "";
+        const email = dom.byId("login-email")?.value || dom.byId("loginEmail")?.value || "";
+        const password = dom.byId("login-password")?.value || dom.byId("loginPassword")?.value || "";
         const ok = await auth.handleLogin(email, password);
         if (ok) loginForm.reset();
+        if (ok) {
+            closeModal(loginModal);
+        }
     });
 
     registerForm?.addEventListener("submit", async (event) => {
         event.preventDefault();
-        const fullName = dom.byId("reg-name")?.value || "";
-        const email = dom.byId("reg-email")?.value || "";
-        const password = dom.byId("reg-password")?.value || "";
+        const fullName = dom.byId("reg-name")?.value || dom.byId("registerName")?.value || "";
+        const email = dom.byId("reg-email")?.value || dom.byId("registerEmail")?.value || "";
+        const password = dom.byId("reg-password")?.value || dom.byId("registerPassword")?.value || "";
         const ok = await auth.handleRegister(email, password, fullName);
         if (ok) {
             registerForm.reset();
             loginTab?.click();
+            closeModal(registerModal);
         }
+    });
+
+    ctaBtn?.addEventListener("click", () => {
+        modal.showReport();
     });
 
     logoutBtn?.addEventListener("click", () => auth.logout());

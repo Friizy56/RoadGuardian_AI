@@ -2,341 +2,394 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>RoadGuardian AI</title>
-        <link rel="manifest" href="/static/manifest.json">
-        <link rel="icon" href="/static/icons/logo-192.png">
-        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-        <link rel="stylesheet" href="/static/style.css">
-    </head>
-    <body>
-        <header class="navbar">
-            <div class="nav-brand">
-                <img src="/static/icons/logo-192.png" alt="RoadGuardian AI">
-                <div>
-                    <strong>RoadGuardian AI</strong>
-                    <span>Community road safety command center</span>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RoadGuardian AI</title>
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="icon" href="/static/icons/logo-192.png">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    <link rel="stylesheet" href="/static/animations.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header class="navbar">
+        <div class="nav-brand">
+            <img src="/static/icons/logo-192.png" alt="RoadGuardian AI">
+            <div>
+                <strong>RoadGuardian AI</strong>
+                <span>Community road safety command center</span>
+            </div>
+        </div>
+        <nav class="nav-links" aria-label="Primary">
+            <a href="#features">Features</a>
+            <a href="#map-view">Map</a>
+            <a href="#dashboard">Dashboard</a>
+        </nav>
+        <div class="nav-actions profile-badge-container logged-out" id="user-profile-badge">
+            <span class="user-info">
+                <span id="user-display-name" class="user-name">Guest</span>
+                <span id="user-display-points" class="user-points">0 pts</span>
+                <span id="user-display-role" class="user-role">citizen</span>
+            </span>
+            <button id="logout-btn" class="logout-action-btn" type="button">Sign out</button>
+        </div>
+    </header>
+
+    <main class="shell">
+        <section id="landing" class="landing-shell">
+            <section id="hero-section" class="hero hero-card hero-stage">
+                <div class="hero-road-bg" aria-hidden="true"></div>
+
+                <div class="container hero-container">
+                    <div class="hero-content">
+                        <div class="hero-warning-sign" aria-hidden="true">
+                            <div class="warning-triangle"><span>!</span></div>
+                            <div class="warning-pulse-ring"></div>
+                        </div>
+
+                        <h1 class="hero-title">
+                            <span class="hero-gradient-text">Report road hazards</span>
+                            <br>
+                            <span>Get them fixed <span class="hero-highlight">faster</span></span>
+                        </h1>
+
+                        <p class="hero-subtitle">
+                            AI-powered detection. Real-time authority response.
+                            Join 2,847 citizens making roads safer.
+                        </p>
+
+                        <div class="hero-cta">
+                            <button class="btn btn-primary btn-large" id="heroGetStarted" type="button">
+                                Start reporting
+                                <svg class="btn-arrow" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                                    <path d="M5 12H19M19 12L12 5M19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                                </svg>
+                            </button>
+                            <button class="btn btn-outline btn-large" id="heroViewMap" type="button">
+                                View live map
+                            </button>
+                        </div>
+
+                        <div class="hero-trust" aria-label="Trust signals">
+                            <div class="trust-item">
+                                <div class="trust-icon">🏆</div>
+                                <span>2,847 hazards reported</span>
+                            </div>
+                            <div class="trust-item">
+                                <div class="trust-icon">✅</div>
+                                <span>89% resolution rate</span>
+                            </div>
+                            <div class="trust-item">
+                                <div class="trust-icon">⚡</div>
+                                <span>Under 30 seconds to report</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="hero-preview">
+                        <div class="preview-card">
+                            <div class="preview-header">
+                                <span class="preview-live-dot"></span>
+                                <span>Live hazard feed</span>
+                            </div>
+                            <div class="preview-hazards">
+                                <div class="preview-hazard critical">
+                                    <span class="hazard-icon">🕳️</span>
+                                    <div class="hazard-info">
+                                        <strong>Large pothole</strong>
+                                        <span>2 min ago • Severity 8.5</span>
+                                    </div>
+                                </div>
+                                <div class="preview-hazard high">
+                                    <span class="hazard-icon">💧</span>
+                                    <div class="hazard-info">
+                                        <strong>Waterlogging</strong>
+                                        <span>15 min ago • Severity 7.2</span>
+                                    </div>
+                                </div>
+                                <div class="preview-hazard medium">
+                                    <span class="hazard-icon">🚧</span>
+                                    <div class="hazard-info">
+                                        <strong>Broken divider</strong>
+                                        <span>1 hour ago • Severity 5.8</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="preview-footer">
+                                <span class="road-dash-loader" aria-hidden="true"></span>
+                                <span>Live updates every 5 seconds</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <nav class="nav-links" aria-label="Primary">
-                <a href="#features">Features</a>
-                <a href="#map-view">Map</a>
-                <a href="#dashboard">Dashboard</a>
-            </nav>
-            <div class="nav-actions" id="user-profile-badge">
-                <span id="user-display-name">Guest</span>
-                <span id="user-display-points">0 pts</span>
-                <span id="user-display-role">citizen</span>
-                <button id="logout-btn" class="secondary-btn">Sign out</button>
-            </div>
-        </header>
 
-        <main class="shell">
-            <section id="landing" class="landing-shell">
-                <section id="hero-section" class="hero-card hero-stage">
-                    <div class="hero-copy">
-                        <p class="eyebrow">YC-style civic infrastructure for safer roads</p>
-                        <h1>Report hazards, score severity, and coordinate repairs from one screen.</h1>
-                        <p class="hero-text">Residents submit hazards in seconds. RoadGuardian AI scores risk, tracks response, and keeps the city accountable with a live map and trusted workflows.</p>
-                        <div class="hero-actions">
-                            <button id="hero-cta-btn" class="primary-btn">Get started</button>
-                            <a class="secondary-btn" href="#map-view">See live map</a>
-                        </div>
-                    </div>
-                    <div class="hero-signal">
-                        <span>Real-time status</span>
-                        <strong>AI + weather + traffic</strong>
-                        <p>Built for residents, crews, and municipal response teams.</p>
-                    </div>
-                </section>
-
-                <section class="trust-row" aria-label="Trust signals">
-                    <article class="trust-pill"><strong>3 min</strong><span>average report time</span></article>
-                    <article class="trust-pill"><strong>Live</strong><span>websocket updates</span></article>
-                    <article class="trust-pill"><strong>Fast</strong><span>severity scoring</span></article>
-                    <article class="trust-pill"><strong>Verified</strong><span>crew resolution flow</span></article>
-                </section>
-
-                <section id="features" class="section-grid">
-                    <article class="feature-card">
-                        <span class="feature-kicker">Capture</span>
-                        <h2>Photo and voice reporting</h2>
-                        <p>File upload and voice transcription help people report hazards without friction.</p>
-                    </article>
-                    <article class="feature-card">
-                        <span class="feature-kicker">Prioritize</span>
-                        <h2>Severity and urgency scoring</h2>
-                        <p>Weather, traffic, and AI analysis combine into a ranking that crews can act on.</p>
-                    </article>
-                    <article class="feature-card">
-                        <span class="feature-kicker">Resolve</span>
-                        <h2>Transparent repair workflow</h2>
-                        <p>Authorities verify, assign, and close issues with proof images and response notes.</p>
-                    </article>
-                </section>
-
-                <section id="impact" class="impact-grid">
-                    <article class="impact-card">
-                        <h3>Municipal trust</h3>
-                        <p>Open dashboards and status badges reduce the gap between citizen reports and crew action.</p>
-                    </article>
-                    <article class="impact-card">
-                        <h3>Citizen confidence</h3>
-                        <p>Clear status changes and point rewards encourage more frequent, higher-quality reports.</p>
-                    </article>
-                    <article class="impact-card">
-                        <h3>Operational clarity</h3>
-                        <p>Authority queues separate pending work, active dispatches, and completed resolutions.</p>
-                    </article>
-                </section>
-
-                <section id="map-view" class="preview-panel">
-                    <div class="panel-head">
-                        <div>
-                            <p class="eyebrow">Live preview</p>
-                            <h2>Citywide hazard map</h2>
-                        </div>
-                        <span class="panel-note">Preview of live incident clustering</span>
-                    </div>
-                    <div id="preview-map" class="preview-map"></div>
-                </section>
-
-                <section id="auth-card" class="auth-panel">
-                    <div class="auth-panel-copy">
-                        <p class="eyebrow">Access</p>
-                        <h2>Sign in or create an account</h2>
-                        <p>Residents can submit reports immediately. Authority users get an expanded verification workflow.</p>
-                    </div>
-                    <div class="auth-tabs">
-                        <button id="tab-login" class="active" type="button">Sign in</button>
-                        <button id="tab-register" type="button">Create account</button>
-                    </div>
-                    <form id="form-login" class="auth-form active">
-                        <input id="login-email" type="email" placeholder="Email" required>
-                        <input id="login-password" type="password" placeholder="Password" required>
-                        <button class="primary-btn" type="submit">Sign in</button>
-                    </form>
-                    <form id="form-register" class="auth-form">
-                        <input id="reg-name" type="text" placeholder="Full name" required>
-                        <input id="reg-email" type="email" placeholder="Email" required>
-                        <input id="reg-password" type="password" placeholder="Password" required>
-                        <button class="primary-btn" type="submit">Create account</button>
-                    </form>
-                </section>
+                <div class="hero-road-dashes" aria-hidden="true">
+                    <div class="dash"></div>
+                    <div class="dash"></div>
+                    <div class="dash"></div>
+                    <div class="dash"></div>
+                    <div class="dash"></div>
+                </div>
             </section>
 
-            <section id="dashboard" class="dashboard-shell" style="display:none;">
-                <section class="stats-grid">
-                    <article class="stat-card">
-                        <span>Reports</span>
-                        <strong id="statTotal">0</strong>
-                        <small>total submitted</small>
-                    </article>
-                    <article class="stat-card">
-                        <span>Severity</span>
-                        <strong id="statSeverity">0.0</strong>
-                        <small>average score</small>
-                    </article>
-                    <article class="stat-card">
-                        <span>Resolved</span>
-                        <strong id="statResolved">0</strong>
-                        <small>cases closed</small>
-                    </article>
-                    <article class="stat-card">
-                        <span>Points</span>
-                        <strong id="statPoints">0</strong>
-                        <small>citizen reputation</small>
-                    </article>
-                </section>
-
-                <section class="dashboard-grid">
-                    <div class="dashboard-main">
-                        <div class="panel-head dashboard-head">
-                            <div>
-                                <p class="eyebrow">Operations</p>
-                                <h2>Live hazard map</h2>
-                            </div>
-                            <button id="reportFab" class="primary-btn" type="button">Report hazard</button>
-                        </div>
-                        <div id="dashboard-map" class="dashboard-map"></div>
-                        <div class="compare-card">
-                            <p class="eyebrow">Comparison</p>
-                            <p>Before and after proof can be reviewed once a crew resolves an issue.</p>
-                        </div>
-                    </div>
-
-                    <aside class="dashboard-sidebar">
-                        <section class="panel feed-panel">
-                            <div class="panel-head">
-                                <h3>Reports</h3>
-                            </div>
-                            <div class="tabs-row">
-                                <button id="feed-tab-recent" class="active" type="button">Recent</button>
-                                <button id="feed-tab-my" type="button">My reports</button>
-                                <button id="feed-tab-authority" type="button">Authority</button>
-                            </div>
-                            <div id="recentReports" class="feed-list active"></div>
-                            <div id="myReports" class="feed-list"></div>
-                            <div id="authorityReports" class="feed-list">
-                                <div class="tabs-row sub-tabs">
-                                    <button id="auth-sub-tab-pending" class="active" type="button">Pending</button>
-                                    <button id="auth-sub-tab-active" type="button">Active</button>
-                                </div>
-                                <div id="auth-pending-section">
-                                    <button id="bulk-verify-btn" class="secondary-btn hidden" type="button">Bulk verify</button>
-                                    <div id="authorityPendingList"></div>
-                                </div>
-                                <div id="auth-active-section" style="display:none;">
-                                    <div id="authorityActiveList"></div>
-                                </div>
-                            </div>
-                        </section>
-
-                        <section id="badges-card" class="panel hidden">
-                            <div class="panel-head">
-                                <h3>Badges</h3>
-                            </div>
-                            <div id="badgesList" class="badges-list"></div>
-                        </section>
-
-                        <section class="panel estimator-card">
-                            <div class="panel-head">
-                                <h3>Severity estimator</h3>
-                            </div>
-                            <form id="estimator-form" class="estimator-form">
-                                <input id="est-distance" type="number" step="0.1" placeholder="Distance to hazard">
-                                <input id="est-weather" type="number" step="0.1" placeholder="Weather intensity">
-                                <input id="est-traffic" type="number" step="0.1" placeholder="Traffic density">
-                                <input id="est-light" type="number" step="0.1" placeholder="Lighting quality">
-                                <button class="primary-btn" type="submit">Estimate</button>
-                            </form>
-                            <div id="estimator-result" class="hidden">
-                                <strong id="est-res-score">0.0</strong>
-                                <span id="est-res-urgency" class="urgency-badge"></span>
-                                <p id="est-res-exp"></p>
-                            </div>
-                        </section>
-                    </aside>
-                </section>
+            <section class="trust-row" aria-label="Trust signals">
+                <article class="trust-pill"><strong>3 min</strong><span>average report time</span></article>
+                <article class="trust-pill"><strong>Live</strong><span>websocket updates</span></article>
+                <article class="trust-pill"><strong>Fast</strong><span>severity scoring</span></article>
+                <article class="trust-pill"><strong>Verified</strong><span>crew resolution flow</span></article>
             </section>
-        </main>
 
-        <section id="reportModal" class="modal hidden">
-            <div class="modal-card report-modal-card">
-                <button id="cancelReport" class="close-btn" type="button">×</button>
+            <section id="features" class="section-grid">
+                <article class="feature-card">
+                    <span class="feature-kicker">Capture</span>
+                    <h2>Photo and voice reporting</h2>
+                    <p>File upload and voice transcription help people report hazards without friction.</p>
+                </article>
+                <article class="feature-card">
+                    <span class="feature-kicker">Prioritize</span>
+                    <h2>Severity and urgency scoring</h2>
+                    <p>Weather, traffic, and AI analysis combine into a ranking that crews can act on.</p>
+                </article>
+                <article class="feature-card">
+                    <span class="feature-kicker">Resolve</span>
+                    <h2>Transparent repair workflow</h2>
+                    <p>Authorities verify, assign, and close issues with proof images and response notes.</p>
+                </article>
+            </section>
+
+            <section id="impact" class="impact-grid">
+                <article class="impact-card">
+                    <h3>Municipal trust</h3>
+                    <p>Open dashboards and status badges reduce the gap between citizen reports and crew action.</p>
+                </article>
+                <article class="impact-card">
+                    <h3>Citizen confidence</h3>
+                    <p>Clear status changes and point rewards encourage more frequent, higher-quality reports.</p>
+                </article>
+                <article class="impact-card">
+                    <h3>Operational clarity</h3>
+                    <p>Authority queues separate pending work, active dispatches, and completed resolutions.</p>
+                </article>
+            </section>
+
+            <section id="map-view" class="preview-panel">
                 <div class="panel-head">
                     <div>
-                        <p class="eyebrow">New report</p>
-                        <h2>Submit a hazard</h2>
+                        <p class="eyebrow">Live preview</p>
+                        <h2>Citywide hazard map</h2>
                     </div>
-                    <span id="locationStatus" class="panel-note">Fetching your location...</span>
+                    <span class="panel-note">Preview of live incident clustering</span>
                 </div>
-                <form id="hazard-report-form" class="report-form">
-                    <input id="photoInput" type="file" accept="image/*" required>
+                <div id="preview-map" class="preview-map"></div>
+            </section>
+
+            <section id="auth-card" class="auth-panel">
+                <div class="auth-panel-copy">
+                    <p class="eyebrow">Access</p>
+                    <h2>Sign in or create an account</h2>
+                    <p>Residents can submit reports immediately. Authority users get an expanded verification workflow.</p>
+                </div>
+                <div class="auth-tabs">
+                    <button id="tab-login" class="active" type="button">Sign in</button>
+                    <button id="tab-register" type="button">Create account</button>
+                </div>
+                <form id="form-login" class="auth-form active">
+                    <input id="login-email" type="email" placeholder="Email" required>
+                    <input id="login-password" type="password" placeholder="Password" required>
+                    <button class="primary-btn" type="submit">Sign in</button>
+                </form>
+                <form id="form-register" class="auth-form">
+                    <input id="reg-name" type="text" placeholder="Full name" required>
+                    <input id="reg-email" type="email" placeholder="Email" required>
+                    <input id="reg-password" type="password" placeholder="Password" required>
+                    <button class="primary-btn" type="submit">Create account</button>
+                </form>
+            </section>
+        </section>
+
+        <section id="dashboard" class="dashboard-shell" style="display:none;">
+            <section class="stats-grid">
+                <article class="stat-card">
+                    <span>Reports</span>
+                    <strong id="statTotal">0</strong>
+                    <small>total submitted</small>
+                </article>
+                <article class="stat-card">
+                    <span>Severity</span>
+                    <strong id="statSeverity">0.0</strong>
+                    <small>average score</small>
+                </article>
+                <article class="stat-card">
+                    <span>Resolved</span>
+                    <strong id="statResolved">0</strong>
+                    <small>cases closed</small>
+                </article>
+                <article class="stat-card">
+                    <span>Points</span>
+                    <strong id="statPoints">0</strong>
+                    <small>citizen reputation</small>
+                </article>
+            </section>
+
+            <section class="dashboard-grid">
+                <div class="dashboard-main">
+                    <div class="panel-head dashboard-head">
+                        <div>
+                            <p class="eyebrow">Operations</p>
+                            <h2>Live hazard map</h2>
+                        </div>
+                        <button id="reportFab" class="primary-btn" type="button">Report hazard</button>
+                    </div>
+                    <div id="dashboard-map" class="dashboard-map"></div>
+                    <div class="compare-card">
+                        <p class="eyebrow">Comparison</p>
+                        <p>Before and after proof can be reviewed once a crew resolves an issue.</p>
+                    </div>
+                </div>
+
+                <aside class="dashboard-sidebar">
+                    <section class="panel feed-panel">
+                        <div class="panel-head">
+                            <h3>Reports</h3>
+                        </div>
+                        <div class="tabs-row">
+                            <button id="feed-tab-recent" class="active" type="button">Recent</button>
+                            <button id="feed-tab-my" type="button">My reports</button>
+                            <button id="feed-tab-authority" class="hidden" type="button">Authority</button>
+                        </div>
+                        <div id="recentReports" class="feed-list active"></div>
+                        <div id="myReports" class="feed-list"></div>
+                        <div id="authorityReports" class="feed-list">
+                            <div class="tabs-row sub-tabs">
+                                <button id="auth-sub-tab-pending" class="active" type="button">Pending</button>
+                                <button id="auth-sub-tab-active" type="button">Active</button>
+                            </div>
+                            <div id="auth-pending-section">
+                                <button id="bulk-verify-btn" class="secondary-btn hidden" type="button">Bulk verify</button>
+                                <div id="authorityPendingList"></div>
+                            </div>
+                            <div id="auth-active-section" style="display:none;">
+                                <div id="authorityActiveList"></div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="badges-card" class="panel hidden">
+                        <div class="panel-head">
+                            <h3>Badges</h3>
+                        </div>
+                        <div id="badgesList" class="badges-list"></div>
+                    </section>
+
+                    <section class="panel estimator-card">
+                        <div class="panel-head">
+                            <h3>Severity estimator</h3>
+                        </div>
+                        <form id="estimator-form" class="estimator-form">
+                            <div class="row-inputs">
+                                <div class="input-group">
+                                    <label for="est-type">Hazard Category</label>
+                                    <select id="est-type">
+                                        <option value="pothole">Pothole</option>
+                                        <option value="crack">Crack</option>
+                                        <option value="waterlogging">Waterlogging</option>
+                                        <option value="broken_dividers">Broken Dividers</option>
+                                        <option value="missing_signs">Missing Signs</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="est-conf">AI Confidence</label>
+                                    <input type="number" id="est-conf" min="0" max="1" step="0.01" value="0.90">
+                                </div>
+                            </div>
+                            <div class="row-inputs">
+                                <div class="input-group">
+                                    <label for="est-traffic">Traffic Density</label>
+                                    <select id="est-traffic">
+                                        <option value="low">Low Impact</option>
+                                        <option value="medium">Medium Impact</option>
+                                        <option value="high">High Impact</option>
+                                    </select>
+                                </div>
+                                <div class="input-group">
+                                    <label for="est-weather">Weather</label>
+                                    <select id="est-weather">
+                                        <option value="clear">Clear Skies</option>
+                                        <option value="fog">Fog / Mist</option>
+                                        <option value="rain">Heavy Rains</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="submit" class="action-submit-btn secondary-btn">📊 Simulate Calculations</button>
+                        </form>
+                        <div id="estimator-result" class="estimator-result-container hidden">
+                            <div class="result-score-block">
+                                <span class="score-label">Severity Score</span>
+                                <span id="est-res-score" class="score-value">0.0</span>
+                                <span id="est-res-urgency" class="urgency-badge">LOW</span>
+                            </div>
+                            <div class="result-explanation">
+                                <p id="est-res-exp">Calculation breakdown details will render here...</p>
+                            </div>
+                        </div>
+                    </section>
+                </aside>
+            </section>
+        </section>
+    </main>
+
+    <section id="reportModal" class="modal hidden">
+        <div class="modal-card report-modal-card">
+            <button id="cancelReport" class="close-btn" type="button">×</button>
+            <div class="panel-head">
+                <div>
+                    <p class="eyebrow">New report</p>
+                    <h2>Submit a hazard</h2>
+                </div>
+                <span id="locationStatus" class="panel-note">Fetching your location...</span>
+            </div>
+            <form id="hazard-report-form" class="report-form">
+                <div class="input-group">
+                    <label for="photoInput">Upload photo</label>
+                    <div class="file-dropzone" id="uploadPhotoBtn">
+                        <input id="photoInput" type="file" accept="image/*" hidden>
+                        <span class="file-message">Choose a hazard photo</span>
+                    </div>
+                    <div id="photoPreview" class="photo-preview"></div>
+                </div>
+                <div class="input-group">
+                    <label for="hazardType">Hazard type</label>
                     <select id="hazardType">
                         <option value="pothole">Pothole</option>
                         <option value="crack">Crack</option>
                         <option value="waterlogging">Waterlogging</option>
                         <option value="broken_divider">Broken divider</option>
                         <option value="missing_sign">Missing sign</option>
+                        <option value="other">Other</option>
                     </select>
-                    <input id="reportLat" type="hidden">
-                    <input id="reportLng" type="hidden">
-                    <textarea id="hazardDescription" placeholder="Optional details"></textarea>
-                    <div id="voiceRecorder" class="voice-panel">
-                        <button id="recordVoiceBtn" type="button" class="secondary-btn">Record voice</button>
-                        <span id="voiceTranscript">Tap mic to record audio report</span>
-                    </div>
-                    <div class="modal-actions">
-                        <button id="submitReport" type="submit" class="primary-btn">Dispatch report</button>
-                    </div>
-                </form>
-            </div>
-        </section>
-
-        <section id="comparison-modal" class="modal hidden">
-            <div class="modal-card comparison-card">
-                <button class="close-btn" type="button">×</button>
-                <div class="comparison-meta">
-                    <h3 id="comp-type">Resolved hazard</h3>
-                    <p id="comp-notes"></p>
-                    <span id="comp-resolved-by"></span>
-                    <span id="comp-resolved-at"></span>
                 </div>
-                <div class="slider-viewport">
-                    <img id="slider-before-img" alt="Before repair">
-                    <div class="after-image-container">
-                        <img id="slider-after-img" alt="After repair">
-                    </div>
-                    <div class="slider-handle"></div>
-                </div>
-            </div>
-        </section>
-
-        <section id="resolve-modal" class="modal hidden">
-            <div class="modal-card resolve-card">
-                <button id="close-resolve-modal" class="close-btn" type="button">×</button>
-                <form id="resolve-hazard-form">
-                    <input id="resolve-hazard-id" type="hidden">
-                    <input id="res-proof-image" type="file" accept="image/*" required>
-                    <textarea id="res-notes" placeholder="Resolution notes"></textarea>
-                    <button class="primary-btn" type="submit">Submit proof & resolve</button>
-                </form>
-            </div>
-        </section>
-
-        <section id="loginModal" class="modal hidden"></section>
-        <section id="registerModal" class="modal hidden"></section>
-
-        <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-        <script src="/static/app.js"></script>
-    </body>
-    </html>
-                                <option value="broken_dividers">Broken Dividers</option>
-                                <option value="missing_signs">Missing Signs</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="row-inputs">
-                        <div class="input-group">
-                            <label for="hz-lat">Latitude</label>
-                            <input type="number" id="hz-lat" step="0.000001" min="-90" max="90" required placeholder="e.g. 13.0827">
-                        </div>
-                        <div class="input-group">
-                            <label for="hz-lng">Longitude</label>
-                            <input type="number" id="hz-lng" step="0.000001" min="-180" max="180" required placeholder="e.g. 80.2707">
-                        </div>
-                        <button type="button" id="locate-btn" class="gps-locate-btn" title="Get current coordinates">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
-                            GPS
-                        </button>
-                    </div>
-
+                <div class="row-inputs">
                     <div class="input-group">
-                        <label for="hz-desc">Details / Comments</label>
-                        <textarea id="hz-desc" rows="3" placeholder="Describe the size, lane location, traffic impact..."></textarea>
+                        <label for="reportLat">Latitude</label>
+                        <input id="reportLat" type="number" step="0.000001" min="-90" max="90" required placeholder="e.g. 13.0827">
                     </div>
-
-                    <button type="submit" class="action-submit-btn report-submit-btn">📤 Dispatch Report</button>
-                </form>
-
+                    <div class="input-group">
+                        <label for="reportLng">Longitude</label>
+                        <input id="reportLng" type="number" step="0.000001" min="-180" max="180" required placeholder="e.g. 80.2707">
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label for="hazardDescription">Details / Comments</label>
+                    <textarea id="hazardDescription" rows="3" placeholder="Describe the size, lane location, traffic impact..."></textarea>
+                </div>
                 <div class="voice-divider">
                     <span>or report via speech</span>
                 </div>
-
-                <!-- Voice Recording Section -->
-                <div class="voice-reporting-container">
-                    <button id="voice-record-btn" class="voice-mic-btn">
+                <div id="voiceRecorder" class="voice-reporting-container">
+                    <button id="recordVoiceBtn" type="button" class="voice-mic-btn">
                         <span class="mic-icon"><svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/icons.svg#mic-icon"></use></svg></span>
                     </button>
                     <div class="voice-status-panel">
-                        <span id="voice-status-text" class="voice-status">Tap mic to record audio report</span>
+                        <span id="voiceTranscript" class="voice-status">Tap mic to record audio report</span>
                         <div id="voice-waves" class="voice-waves-container">
                             <span class="wave"></span>
                             <span class="wave"></span>
@@ -344,296 +397,103 @@
                         </div>
                     </div>
                 </div>
-            </div>
-
-            <!-- CARD 3: Severity Estimator Sandbox -->
-            <div class="glass-card card-estimator">
-                <div class="card-header">
-                    <div class="card-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--concrete-dark)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg>
-                    </div>
-                    <h2>Severity Calculation Sandbox</h2>
+                <div class="modal-actions">
+                    <button id="submitReport" type="button" class="primary-btn">Dispatch report</button>
                 </div>
-
-                <form id="estimator-form" class="estimator-form">
-                    <div class="row-inputs">
-                        <div class="input-group">
-                            <label for="est-type">Hazard Category</label>
-                            <select id="est-type">
-                                <option value="pothole">Pothole</option>
-                                <option value="crack">Crack</option>
-                                <option value="waterlogging">Waterlogging</option>
-                                <option value="broken_dividers">Broken Dividers</option>
-                                <option value="missing_signs">Missing Signs</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label for="est-conf">AI Confidence</label>
-                            <input type="number" id="est-conf" min="0" max="1" step="0.01" value="0.90">
-                        </div>
-                    </div>
-
-                    <div class="row-inputs">
-                        <div class="input-group">
-                            <label for="est-traffic">Traffic Density</label>
-                            <select id="est-traffic">
-                                <option value="low">Low Impact</option>
-                                <option value="medium">Medium Impact</option>
-                                <option value="high">High Impact</option>
-                            </select>
-                        </div>
-                        <div class="input-group">
-                            <label for="est-weather">Weather</label>
-                            <select id="est-weather">
-                                <option value="clear">Clear Skies</option>
-                                <option value="fog">Fog / Mist</option>
-                                <option value="rain">Heavy Rains</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="action-submit-btn secondary-btn">📊 Simulate Calculations</button>
-                </form>
-
-                <div id="estimator-result" class="estimator-result-container hidden">
-                    <div class="result-score-block">
-                        <span class="score-label">Severity Score</span>
-                        <span id="est-res-score" class="score-value">0.0</span>
-                        <span id="est-res-urgency" class="urgency-badge">LOW</span>
-                    </div>
-                    <div class="result-explanation">
-                        <p id="est-res-exp">Calculation breakdown details will render here...</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- ========== RIGHT COLUMN: Analytics, Map, Feeds ========== -->
-        <section class="display-column">
-
-            <!-- Real-time Analytics KPI Cards -->
-            <div class="analytics-row">
-                <div class="stats-card">
-                    <div class="stat-icon yellow">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--safety-yellow)" stroke-width="2"><path d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.25C17.25 23.15 21 18.25 21 13V7l-9-5z"/></svg>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Total Submissions</span>
-                        <span id="stat-total" class="stat-number">0</span>
-                    </div>
-                </div>
-                <div class="stats-card">
-                    <div class="stat-icon red">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--safety-red)" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0zM12 9v4M12 17h.01"/></svg>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">High Urgency</span>
-                        <span id="stat-critical" class="stat-number">0</span>
-                    </div>
-                </div>
-                <div class="stats-card">
-                    <div class="stat-icon blue">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--safety-blue)" stroke-width="2"><path d="M21 12a9 9 0 11-6.22-8.56"/><path d="M21 3v5h-5"/></svg>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Pending Verifies</span>
-                        <span id="stat-pending" class="stat-number">0</span>
-                    </div>
-                </div>
-                <div class="stats-card">
-                    <div class="stat-icon green">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--safety-green)" stroke-width="2"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
-                    </div>
-                    <div class="stat-info">
-                        <span class="stat-label">Resolved Issues</span>
-                        <span id="stat-resolved" class="stat-number">0</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- CARD 4: Interactive Heatmap GIS Plot -->
-            <div class="glass-card card-map">
-                <div class="card-header">
-                    <div class="card-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--safety-blue)" stroke-width="2" stroke-linecap="round"><path d="M1 6v16l7-4 8 4 7-4V2l-7 4-8-4-7 4z"/><path d="M8 2v16M16 6v16"/></svg>
-                    </div>
-                    <h2>Real-Time Spatial Hazards Heatmap</h2>
-                    <span class="pulse-indicator">● LIVE</span>
-                </div>
-
-                <div class="map-wrapper">
-                    <div id="map"></div>
-                </div>
-
-                <div class="map-legend">
-                    <span class="legend-item"><span class="color-dot pothole"></span> Pothole</span>
-                    <span class="legend-item"><span class="color-dot crack"></span> Crack</span>
-                    <span class="legend-item"><span class="color-dot water"></span> Waterlogging</span>
-                    <span class="legend-item"><span class="color-dot divider"></span> Dividers</span>
-                    <span class="legend-item"><span class="color-dot sign"></span> Missing Signs</span>
-                </div>
-            </div>
-
-            <!-- Tabbed View: Live Feed & User Submissions -->
-            <div class="glass-card card-feeds">
-                <div class="feed-tabs">
-                    <button id="feed-tab-recent" class="feed-tab-btn active">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><path d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.25C17.25 23.15 21 18.25 21 13V7l-9-5z"/></svg>
-                        Live Reports
-                    </button>
-                    <button id="feed-tab-my" class="feed-tab-btn">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-                        My Submissions
-                    </button>
-                    <button id="feed-tab-authority" class="feed-tab-btn hidden">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:-2px;margin-right:4px"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
-                        Authority Review
-                    </button>
-                </div>
-
-                <div class="feed-container">
-                    <!-- Recent global items list -->
-                    <div id="recent-reports-feed" class="feed-list active">
-                        <div class="empty-state">No hazard reports found in the system.</div>
-                    </div>
-
-                    <!-- User specific reports list -->
-                    <div id="my-reports-feed" class="feed-list">
-                        <div class="empty-state">No hazard reports found in the system.</div>
-                    </div>
-
-                    <!-- Authority pending review list -->
-                    <div id="authority-reports-feed" class="feed-list">
-                        <div class="authority-sub-tabs" style="display: flex; gap: 0.5rem; margin-bottom: 1rem; border-bottom: 1px solid rgba(0,0,0,0.08); padding-bottom: 0.5rem;">
-                            <button id="auth-sub-tab-pending" class="feed-tab-btn active" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-2px;margin-right:4px"><use href="/static/icons.svg#check-icon"></use></svg> Pending Review</button>
-                            <button id="auth-sub-tab-active" class="feed-tab-btn" style="font-size: 0.8rem; padding: 0.4rem 0.8rem;"><svg width="14" height="14" viewBox="0 0 24 24" aria-hidden="true" style="vertical-align:-2px;margin-right:4px"><use href="/static/icons.svg#location-icon"></use></svg> Active Crews</button>
-                        </div>
-                        <div id="auth-pending-section" class="auth-section active">
-                            <div class="bulk-verify-bar hidden" style="margin-bottom: 0.8rem;">
-                                <button id="bulk-verify-btn" class="verify-action-btn bulk-btn">✓ Verify Checked Reports</button>
-                            </div>
-                            <div id="authority-pending-list" class="feed-list active">
-                                <div class="empty-state">No pending reports for review. All clear!</div>
-                            </div>
-                        </div>
-                        <div id="auth-active-section" class="auth-section" style="display: none;">
-                            <div id="authority-active-list" class="feed-list">
-                                <div class="empty-state">No active crew dispatches found.</div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Citizen Profile Badges / Achievements Drawer -->
-            <div id="badges-card" class="glass-card card-badges hidden">
-                <div class="card-header">
-                    <div class="card-icon">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--safety-yellow)" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="7"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
-                    </div>
-                    <h2>Unlocked Citizen Achievements</h2>
-                </div>
-
-                <div id="badges-list" class="badges-flex-container">
-                    <!-- Badges populated here by app.js -->
-                </div>
-            </div>
-
-        </section>
-    </main>
-
-    <!-- ============================================================
-         CREW RESOLUTION PROOF MODAL
-         ============================================================ -->
-    <div id="resolve-modal" class="modal-overlay hidden">
-        <div class="modal-content glass-card">
-            <button id="close-resolve-modal" class="close-modal-btn">&times;</button>
-            <div class="card-header">
-                <div class="card-icon"><svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/icons.svg#shield-icon"></use></svg></div>
-                <h2>Submit Crew Resolution Proof</h2>
-            </div>
-            <form id="resolve-hazard-form" enctype="multipart/form-data">
-                <input type="hidden" id="resolve-hazard-id">
-                <div class="input-group">
-                    <label for="res-proof-image">Upload Repaired Proof (Image)</label>
-                    <div class="file-dropzone">
-                        <input type="file" id="res-proof-image" required accept="image/*">
-                        <span class="file-message"><svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true"><use href="/static/icons.svg#camera-icon"></use></svg> Choose completed road repair image</span>
-                    </div>
-                </div>
-                <div class="input-group" style="margin-top: 1rem;">
-                    <label for="res-notes">Resolution Notes / Comments</label>
-                    <textarea id="res-notes" rows="3" required placeholder="Detail the repairs, materials used, crew names..."></textarea>
-                </div>
-                <button type="submit" class="action-submit-btn" style="margin-top: 1.2rem;">✓ Submit Proof & Resolve</button>
             </form>
         </div>
-    </div>
+    </section>
 
-    <!-- ============================================================
-         BEFORE / AFTER COMPARISON SLIDER MODAL
-         ============================================================ -->
-    <div id="comparison-modal" class="modal-overlay hidden">
-        <div class="modal-content glass-card comparison-modal-content">
-            <button id="close-comparison-modal" class="close-modal-btn">&times;</button>
-            <div class="card-header">
-                <div class="card-icon">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--safety-yellow)" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                </div>
-                <h2>Road Reparation Comparison</h2>
+    <section id="comparison-modal" class="modal hidden">
+        <div class="modal-card comparison-card">
+            <button id="close-comparison-modal" class="close-btn" type="button">×</button>
+            <div class="comparison-meta">
+                <h3 id="comp-type">Resolved hazard</h3>
+                <p id="comp-notes"></p>
+                <span id="comp-resolved-by"></span>
+                <span id="comp-resolved-at"></span>
             </div>
-
-            <!-- Draggable Split Slider Viewport -->
             <div class="slider-viewport">
-                <div class="before-image-container">
-                    <img id="slider-before-img" src="" alt="Before Repaired Road">
-                    <span class="slider-label label-before">BEFORE (HAZARD)</span>
-                </div>
+                <img id="slider-before-img" alt="Before repair">
                 <div class="after-image-container">
-                    <img id="slider-after-img" src="" alt="After Repaired Road">
-                    <span class="slider-label label-after">AFTER (REPAIRED)</span>
+                    <img id="slider-after-img" alt="After repair">
                 </div>
-                <div class="slider-handle">
-                    <div class="slider-arrow arrow-left">&larr;</div>
-                    <div class="slider-bar"></div>
-                    <div class="slider-arrow arrow-right">&rarr;</div>
-                </div>
+                <div class="slider-handle"></div>
             </div>
+        </div>
+    </section>
 
-            <div class="comparison-details" style="margin-top: 1.2rem; border-top: 1px solid rgba(0,0,0,0.08); padding-top: 1rem;">
-                <h3 id="comp-type" style="color: var(--safety-blue); font-size: 1.1rem; font-weight: 700; margin-bottom: 0.5rem;">Pothole Resolution</h3>
-                <p id="comp-notes" style="color: var(--concrete-dark); font-size: 0.9rem; line-height: 1.5; margin-bottom: 0.8rem;">Resolution notes will populate here...</p>
-                <div class="comp-meta" style="display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--concrete);">
-                    <span id="comp-resolved-by">Resolved by: Officer Bobby</span>
-                    <span id="comp-resolved-at">Date: May 27, 2026</span>
-                </div>
+    <section id="resolve-modal" class="modal hidden">
+        <div class="modal-card resolve-card">
+            <button id="close-resolve-modal" class="close-btn" type="button">×</button>
+            <form id="resolve-hazard-form">
+                <input id="resolve-hazard-id" type="hidden">
+                <input id="res-proof-image" type="file" accept="image/*" required>
+                <textarea id="res-notes" placeholder="Resolution notes"></textarea>
+                <button class="primary-btn" type="submit">Submit proof & resolve</button>
+            </form>
+        </div>
+    </section>
+
+    <!-- Login Modal -->
+    <div id="loginModal" class="modal" style="display: none;">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2>Sign in</h2>
+                <button class="modal-close" type="button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label for="loginEmail">Email</label>
+                        <input type="email" id="loginEmail" required placeholder="you@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="loginPassword">Password</label>
+                        <input type="password" id="loginPassword" required placeholder="••••••••">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">Sign in</button>
+                </form>
+                <p class="modal-footer-text">
+                    Don't have an account? <a href="#" id="switchToRegister">Create one</a>
+                </p>
             </div>
         </div>
     </div>
 
-    <!-- ============================================================
-         FOOTER — Civic Infrastructure Branding
-         ============================================================ -->
-    <footer class="app-footer asphalt-bg">
-        <div class="road-divider"></div>
-        <div class="footer-inner">
-            <div class="footer-brand">
-                <div class="logo-icon" style="width:28px;height:28px;font-size:14px;">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M12 2L3 7v6c0 5.25 3.75 10.15 9 11.25C17.25 23.15 21 18.25 21 13V7l-9-5z" fill="#1a1a1a" stroke="#1a1a1a" stroke-width="1"/>
-                        <path d="M12 6c-1.5 2-3 4.5-3 7s1.5 5 3 6.5c1.5-1.5 3-4 3-6.5s-1.5-5-3-7z" fill="#FFC107" opacity="0.9"/>
-                        <circle cx="12" cy="14" r="1.5" fill="#1a1a1a"/>
-                    </svg>
-                </div>
-                <span class="footer-brand-name">RoadGuardian AI</span>
+    <!-- Register Modal -->
+    <div id="registerModal" class="modal" style="display: none;">
+        <div class="modal-content modal-sm">
+            <div class="modal-header">
+                <h2>Create account</h2>
+                <button class="modal-close" type="button">&times;</button>
             </div>
-            <p class="footer-copy">Trusted by citizens, ready for governments. Built to make road safety operations transparent and fast.</p>
-            <p class="footer-legal">&copy; 2026 RoadGuardian AI. Civic infrastructure software.</p>
+            <div class="modal-body">
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="registerName">Full name</label>
+                        <input type="text" id="registerName" required placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerEmail">Email</label>
+                        <input type="email" id="registerEmail" required placeholder="you@example.com">
+                    </div>
+                    <div class="form-group">
+                        <label for="registerPassword">Password</label>
+                        <input type="password" id="registerPassword" required placeholder="••••••••">
+                        <p class="hint">At least 8 characters</p>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">Create account</button>
+                </form>
+                <p class="modal-footer-text">
+                    Already have an account? <a href="#" id="switchToLogin">Sign in</a>
+                </p>
+            </div>
         </div>
-    </footer>
+    </div>
 
-    <!-- Leaflet.js & Vanilla App Logic Script -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-    <script src="app.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="/static/animations.js"></script>
+    <script src="/static/app.js"></script>
 </body>
 </html>
