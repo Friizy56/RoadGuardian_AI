@@ -1,8 +1,12 @@
 import asyncio
 import httpx
-import sqlite3
 import os
 import time
+
+from sqlalchemy import select
+
+from app.database import async_session_factory
+from app.models.hazard import User
 
 API_URL = "http://127.0.0.1:8000"
 
@@ -116,13 +120,13 @@ async def test_resolution_flow():
         assert reg_auth_resp.status_code == 201
         print("[OK] Authority user signed up.")
 
-        # 6. Manually elevate user role to "authority" in SQLite database
-        print("\n[DB] Elevating Officer Bobby to 'authority' in SQLite...")
-        conn = sqlite3.connect("roadguardian_dev.db")
-        cursor = conn.cursor()
-        cursor.execute("UPDATE users SET role = 'authority' WHERE email = ?", (authority_email,))
-        conn.commit()
-        conn.close()
+        # 6. Manually elevate user role to "authority" in the live database
+        print("\n[DB] Elevating Officer Bobby to 'authority' in Postgres...")
+        async with async_session_factory() as session:
+            result = await session.execute(select(User).where(User.email == authority_email))
+            user = result.scalar_one()
+            user.role = "authority"
+            await session.commit()
         print("[OK] Elevation successfully written.")
 
         # 7. Login Authority User
