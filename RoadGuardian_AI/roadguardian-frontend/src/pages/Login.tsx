@@ -26,10 +26,12 @@ export const Login = () => {
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
+      const clientBase = import.meta.env.VITE_CLIENT_URL || window.location.origin;
+      const redirectTo = clientBase + (role === 'authority' ? '/authority' : '/dashboard');
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin + (role === 'authority' ? '/authority' : '/dashboard'),
+          redirectTo,
         }
       });
       if (error) toast.error(error.message);

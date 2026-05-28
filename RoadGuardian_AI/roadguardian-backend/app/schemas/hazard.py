@@ -162,6 +162,8 @@ class DashboardAnalyticsResponse(BaseModel):
     avg_severity: float = Field(..., description="Average system-wide severity score")
     high_urgency_count: int = Field(..., description="Total hazards flagged critical or high urgency")
     recent_hazards: List[HazardResponse] = Field(..., description="List of the most recent hazard reports")
+    time_data: List[Dict[str, Any]] = Field(..., description="Hazard counts over the last 7 days")
+    type_data: List[Dict[str, Any]] = Field(..., description="Hazard counts grouped by type")
 
 
 class SeverityScoreResponse(BaseModel):

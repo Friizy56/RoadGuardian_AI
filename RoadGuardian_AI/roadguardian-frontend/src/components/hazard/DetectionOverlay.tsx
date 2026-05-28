@@ -56,15 +56,37 @@ export const DetectionOverlay = ({ imageUrl, onAnalysisComplete }: DetectionOver
           },
         };
 
-        const result = await model.generateContent([prompt, imagePart]);
+        const request = {
+          contents: [
+            {
+              role: 'user',
+              parts: [
+                { text: prompt },
+                imagePart
+              ]
+            }
+          ],
+          generationConfig: {
+            responseMimeType: 'application/json',
+            maxOutputTokens: 150,
+            temperature: 0.2
+          }
+        };
+
+        const result = await model.generateContent(request);
         const responseText = result.response.text();
         
         // Try to parse the JSON response
         const jsonMatch = responseText.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
           const parsed = JSON.parse(jsonMatch[0]);
+          const normalized = {
+            type: String(parsed.type || parsed.hazard_type || parsed.hazard || 'Unknown Hazard'),
+            severity: Math.min(10, Math.max(1, Number(parsed.severity ?? parsed.severity_score ?? 5) || 5)),
+            confidence: Math.min(100, Math.max(1, Number(parsed.confidence ?? parsed.confidence_score ?? 50) || 50))
+          };
           setIsAnalyzing(false);
-          onAnalysisComplete(parsed);
+          onAnalysisComplete(normalized);
         } else {
           throw new Error("Failed to parse Gemini response as JSON");
         }

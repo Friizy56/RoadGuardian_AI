@@ -46,7 +46,11 @@ async_session_factory = async_sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )
 
-from app.models.base import Base
+try:
+    from app.models.base import Base
+except Exception:
+    Base = None
+    logger.warning("⚠️ app.models package not found; database table creation will be skipped if models are missing.")
 
 # ======================
 # Session Management
@@ -94,7 +98,14 @@ async def init_db() -> None:
     """
     try:
         # Import models here so they are registered with Base.metadata before create_all
-        import app.models.hazard
+        try:
+            import app.models.hazard  # noqa: F401
+        except Exception:
+            logger.warning("⚠️ No model modules found to register; skipping model imports.")
+
+        if Base is None:
+            logger.warning("⚠️ Base metadata not available; skipping create_all.")
+            return
 
         async with engine.begin() as conn:
             # This command inspects all classes that inherit from Base
