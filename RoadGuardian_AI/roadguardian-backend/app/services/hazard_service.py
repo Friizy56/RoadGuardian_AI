@@ -10,6 +10,7 @@ Last Updated: 2026-05-27
 
 import math
 import logging
+from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -345,13 +346,39 @@ class HazardService:
         recent_res = await db.execute(recent_stmt)
         recent_hazards = recent_res.scalars().all()
         
+        # Aggregate hazard counts by type for type_data
+        type_stmt = select(Hazard.hazard_type, func.count(Hazard.id)).group_by(Hazard.hazard_type)
+        type_res = await db.execute(type_stmt)
+        type_data_raw = type_res.all()
+        type_data = [{"name": ht.title().replace("_", " "), "value": count} for ht, count in type_data_raw]
+        
+        # Aggregate hazard counts over the last 7 days for time_data
+        today = datetime.utcnow().date()
+        days = {}
+        for i in range(6, -1, -1):
+            d = today - timedelta(days=i)
+            day_name = d.strftime('%a')
+            days[d] = {"name": day_name, "hazards": 0}
+            
+        week_ago = today - timedelta(days=6)
+        time_stmt = select(Hazard.created_at).where(Hazard.created_at >= datetime(week_ago.year, week_ago.month, week_ago.day))
+        time_res = await db.execute(time_stmt)
+        for row in time_res:
+            dt = row[0].date()
+            if dt in days:
+                days[dt]["hazards"] += 1
+                
+        time_data = list(days.values())
+        
         return {
             "total_hazards": total_hazards,
             "pending_count": pending_count,
             "resolved_count": resolved_count,
             "avg_severity": round(float(avg_severity_val), 2),
             "high_urgency_count": high_urgency_count,
-            "recent_hazards": recent_hazards
+            "recent_hazards": recent_hazards,
+            "time_data": time_data,
+            "type_data": type_data
         }
 
     @classmethod

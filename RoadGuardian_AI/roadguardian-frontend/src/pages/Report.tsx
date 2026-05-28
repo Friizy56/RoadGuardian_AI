@@ -17,7 +17,7 @@ export const Report = () => {
   const [aiResult, setAiResult] = useState<any>(null);
   
   const { coords, getLocation, loading: locLoading } = useGeolocation();
-  const { isRecording, transcript, startRecording, stopRecording, setTranscript } = useVoiceRecorder();
+  const { isRecording, transcript, audioUrl, startRecording, stopRecording, setTranscript } = useVoiceRecorder();
 
   const [manualLocation, setManualLocation] = useState({
     state: '',
@@ -137,6 +137,12 @@ export const Report = () => {
                     onChange={(e) => setTranscript(e.target.value)}
                     className="mt-4 rounded-sm border-border bg-slate-50 dark:bg-background focus-visible:ring-[#000080] h-12 text-sm font-medium"
                   />
+                  {audioUrl && (
+                    <div className="mt-4 text-sm text-muted-foreground">
+                      <label className="block uppercase tracking-widest text-[10px] font-bold mb-2">Recorded audio preview</label>
+                      <audio controls src={audioUrl} className="w-full rounded-sm border border-border" />
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -17,7 +17,7 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.database import get_db
-from app.models.hazard import User
+from typing import Any
 
 # ======================
 # Security Configuration
@@ -59,7 +59,7 @@ def decode_access_token(token: str) -> Optional[dict]:
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
     db: AsyncSession = Depends(get_db)
-) -> User:
+) -> Any:
     """
     Dependency to extract and verify current authenticated user.
     Raises 401 if token is invalid or user doesn't exist.
@@ -78,6 +78,9 @@ async def get_current_user(
     if email is None:
         raise credentials_exception
         
+    # Import User model lazily to avoid import-time DB/model dependencies
+    from app.models.hazard import User
+
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     

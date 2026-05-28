@@ -3,7 +3,9 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import path from 'path';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  // Use root base during dev server, and /static/ when building for backend
+  base: command === 'serve' ? '/' : '/static/',
   plugins: [
     react(),
     VitePWA({
@@ -36,4 +38,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-});
+  build: {
+    outDir: path.resolve(__dirname, '../roadguardian-backend/static'),
+    emptyOutDir: true,
+    assetsDir: 'assets'
+  }
+}));
