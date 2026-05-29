@@ -113,9 +113,72 @@ export const Report = () => {
 
       toast.success('Hazard reported successfully! You earned 50 points.');
       navigate('/dashboard');
-    } catch (error) {
+    } catch (error: any) {
       console.error("Submission failed", error);
-      toast.error("Failed to submit hazard report.");
+      
+      // Determine if this is a network-level error (backend unreachable)
+      const isNetworkError = 
+        error?.code === 'ERR_NETWORK' || 
+        error?.code === 'ERR_CONNECTION_REFUSED' ||
+        error?.code === 'ECONNABORTED' ||
+        error?.message?.includes('Network Error') || 
+        !error?.response;
+      
+      if (isNetworkError) {
+        // Backend is unreachable — save offline so user's work isn't lost
+        try {
+          if (imageFile) {
+            await saveOfflineReport({
+              id: uuidv4(),
+              type: 'image',
+              latitude: String(finalLat),
+              longitude: String(finalLng),
+              hazard_type: parsedType,
+              description: finalDescription,
+              mediaBlob: imageFile,
+              timestamp: Date.now()
+            });
+          } else if (audioBlob) {
+            await saveOfflineReport({
+              id: uuidv4(),
+              type: 'voice',
+              latitude: String(finalLat),
+              longitude: String(finalLng),
+              mediaBlob: audioBlob,
+              timestamp: Date.now()
+            });
+          }
+          toast.success('Backend unavailable — report saved offline. It will sync automatically when the server is back.');
+          navigate('/dashboard');
+          return;
+        } catch (offlineErr) {
+          console.error("Offline save also failed", offlineErr);
+          toast.error("Backend is unreachable and offline save failed. Please check your connection and try again.");
+          return;
+        }
+      }
+      
+      // Backend responded with an error — show a specific message
+      const status = error?.response?.status;
+      const detail = error?.response?.data?.detail;
+      
+      if (status === 401) {
+        toast.error("Session expired or not logged in. Please log in again.");
+      } else if (status === 422) {
+        // Validation error from FastAPI
+        const validationMsg = typeof detail === 'string' 
+          ? detail 
+          : Array.isArray(detail) 
+            ? detail.map((e: any) => e?.msg || e?.message || JSON.stringify(e)).join('; ')
+            : "Invalid form data. Please check your inputs.";
+        toast.error(`Validation error: ${validationMsg}`);
+      } else if (status === 413) {
+        toast.error("File too large. Please upload an image under 5MB.");
+      } else if (status && status >= 500) {
+        toast.error("Server error. The team has been notified. Please try again shortly.");
+      } else {
+        toast.error(detail || "Failed to submit hazard report. Please try again.");
+      }
     } finally {
       setIsSubmitting(false);
     }

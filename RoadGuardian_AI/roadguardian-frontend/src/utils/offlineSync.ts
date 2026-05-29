@@ -44,10 +44,10 @@ export const syncOfflineReports = async () => {
         formData.append('image', report.mediaBlob, 'hazard_image.jpg');
         formData.append('hazard_type', report.hazard_type || 'other');
         formData.append('description', report.description || '');
-        await api.post('/hazards/upload', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await api.post('/hazards/upload', formData);
       } else {
         formData.append('audio', report.mediaBlob, 'voice_report.webm');
-        await api.post('/hazards/voice-report', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+        await api.post('/hazards/voice-report', formData);
       }
     }
 
