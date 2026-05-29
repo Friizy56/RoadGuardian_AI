@@ -19,7 +19,9 @@ export interface BidCreate {
 export const tenderApi = {
   getAvailableTenders: async () => {
     const response = await api.get('/tenders');
-    return response.data;
+    // Ensure we always return an array
+    const data = response.data;
+    return Array.isArray(data) ? data : data?.data || [];
   },
   
   submitBid: async (hazardId: number, bidData: BidCreate) => {

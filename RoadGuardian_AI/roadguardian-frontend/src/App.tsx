@@ -19,6 +19,7 @@ const Heatmap = lazy(() => import('@/pages/Heatmap').then((module) => ({ default
 const AuthorityDashboard = lazy(() => import('@/pages/AuthorityDashboard').then((module) => ({ default: module.AuthorityDashboard })));
 const TendersDashboard = lazy(() => import('@/pages/TendersDashboard').then((module) => ({ default: module.TendersDashboard })));
 const WhatsAppSimulator = lazy(() => import('@/pages/WhatsAppSimulator').then((module) => ({ default: module.WhatsAppSimulator })));
+const WhatsAppMessages = lazy(() => import('@/pages/WhatsAppMessages').then((module) => ({ default: module.WhatsAppMessages })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -84,6 +85,7 @@ function App() {
                 <Route path="/authority" element={<ProtectedRoute requiredRole="authority"><AuthorityDashboard /></ProtectedRoute>} />
                 <Route path="/tenders" element={<ProtectedRoute requiredRole="authority"><TendersDashboard /></ProtectedRoute>} />
                 <Route path="/whatsapp-demo" element={<WhatsAppSimulator />} />
+                <Route path="/whatsapp-messages" element={<ProtectedRoute><WhatsAppMessages /></ProtectedRoute>} />
               </Route>
             </Routes>
           </Suspense>

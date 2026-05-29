@@ -12,7 +12,7 @@ export function TendersDashboard() {
   const [isBidModalOpen, setIsBidModalOpen] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: tenders, isLoading } = useQuery({
+  const { data: tenders = [], isLoading } = useQuery({
     queryKey: ['tenders'],
     queryFn: tenderApi.getAvailableTenders,
   });

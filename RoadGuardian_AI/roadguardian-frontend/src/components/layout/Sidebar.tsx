@@ -25,6 +25,7 @@ export const Sidebar = () => {
 
   // Always show WhatsApp Demo for all roles
   links.push({ to: '/whatsapp-demo', icon: MessageCircle, label: 'WhatsApp Simulator' });
+  links.push({ to: '/whatsapp-messages', icon: MessageCircle, label: 'WhatsApp Messages' });
 
   return (
     <>

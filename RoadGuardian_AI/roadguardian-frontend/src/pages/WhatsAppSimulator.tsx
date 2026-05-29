@@ -21,28 +21,41 @@ export const WhatsAppSimulator = () => {
     setIsLoading(true);
 
     try {
-      // Simulate Twilio form-urlencoded payload
-      const formData = new URLSearchParams();
+      // Create FormData exactly like Twilio sends it
+      const formData = new FormData();
       formData.append('From', `whatsapp:${phoneNumber}`);
       formData.append('Body', userMessage);
-      // Mock coordinates
       formData.append('Latitude', '13.0827');
       formData.append('Longitude', '80.2707');
 
-      const response = await api.post('/whatsapp/webhook', formData, {
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      // Send to backend webhook - do NOT set Content-Type header
+      // Browser will automatically set it to multipart/form-data with boundary
+      const response = await fetch('http://127.0.0.1:8000/whatsapp/webhook', {
+        method: 'POST',
+        body: formData,
+        // Don't set headers - let browser handle it
       });
+
+      const responseText = await response.text();
+      
+      if (!response.ok) {
+        console.error('Error response:', responseText);
+        setMessages(prev => [...prev, { text: `❌ Error: ${response.status}`, isBot: true }]);
+        return;
+      }
 
       // Parse the TwiML XML response
       const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(response.data, 'text/xml');
+      const xmlDoc = parser.parseFromString(responseText, 'text/xml');
       const botReply = xmlDoc.getElementsByTagName('Message')[0]?.textContent || "Error parsing response";
 
       setMessages(prev => [...prev, { text: botReply, isBot: true }]);
+      toast.success('Message sent successfully!');
     } catch (error) {
-      console.error(error);
-      toast.error('Failed to communicate with the WhatsApp webhook');
-      setMessages(prev => [...prev, { text: "❌ Connection Error", isBot: true }]);
+      console.error('Send error:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Failed to communicate with the WhatsApp webhook';
+      toast.error(errorMsg);
+      setMessages(prev => [...prev, { text: `❌ ${errorMsg}`, isBot: true }]);
     } finally {
       setIsLoading(false);
     }
