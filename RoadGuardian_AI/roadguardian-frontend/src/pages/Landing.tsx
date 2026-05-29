@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Activity, Map, Trophy, ShieldCheck, Zap, Globe2, AlertTriangle, Building2, UserCircle2, Radar, Shield, Server, PhoneCall, FileText, ChevronRight, ChevronDown, Info } from 'lucide-react';
+import { Activity, Map, Trophy, ShieldCheck, Zap, Globe2, AlertTriangle, Building2, UserCircle2, Radar, Shield, Server, Mic, PhoneCall, FileText, ChevronRight, ChevronDown, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+
+
 
 export const Landing = () => {
   const navigate = useNavigate();
@@ -297,7 +299,7 @@ export const Landing = () => {
                          : 'bg-[#000080] hover:bg-[#000080]/90 text-white border-[#FF9933]'
                      }`}
                    >
-                     <PhoneCall className={`w-6 h-6 ${voiceState === 'listening' ? 'animate-bounce' : ''}`} />
+                     <Mic className={`w-6 h-6 ${voiceState === 'listening' ? 'animate-bounce' : ''}`} />
                      {voiceState === 'listening' && (
                        <span className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-75"></span>
                      )}
@@ -330,36 +332,37 @@ export const Landing = () => {
 
                  {/* Console Logs / Audio Transcript Terminal */}
                  <div className="md:col-span-8 space-y-3 font-mono">
-                   <div className="bg-[#040D1A] text-slate-300 p-4 rounded-sm border border-border/80 text-[11px] leading-relaxed relative min-h-[170px] flex flex-col justify-between">
+                   <div className="bg-[#040D1A] text-slate-300 p-4 rounded-sm border border-border/80 text-[11px] leading-relaxed relative min-h-[170px] flex flex-col justify-between shadow-inner">
                      <div>
                        <span className="text-teal-400 font-bold flex items-center gap-1.5 text-2xs uppercase tracking-widest border-b border-[#000080] pb-1.5 mb-2">
                          <Server className="w-3.5 h-3.5" /> AI Real-Time Processing Console
                        </span>
                        
                        <p className="text-slate-400 mt-1">
-                         <span className="text-teal-400 font-black">&gt;</span> SYSTEM STATE: <span className="font-extrabold text-foreground">{voiceState.toUpperCase()}</span>
+                         <span className="text-teal-400 font-black">&gt;</span> SYSTEM STATE: <span className="font-extrabold text-white bg-slate-800 px-1.5 py-0.5 rounded text-xs">{voiceState.toUpperCase()}</span>
                        </p>
 
                        {transcriptText && (
                          <div className="mt-3">
                            <span className="text-[#FF9933] font-bold uppercase text-[9px] block">Transcribed Native Text:</span>
-                           <p className="text-white text-xs mt-1 font-sans">{transcriptText}</p>
+                           <p className="text-slate-100 text-xs mt-1 font-sans font-medium">{transcriptText}</p>
                          </div>
                        )}
 
                        {translatedText && (
                          <div className="mt-3 animate-fadeIn">
                            <span className="text-emerald-400 font-bold uppercase text-[9px] block">Gemini NLP Translated Output (English):</span>
-                           <p className="text-white text-xs mt-1 font-sans font-medium bg-emerald-950/20 p-2 rounded border border-emerald-500/20">{translatedText}</p>
+                           <p className="text-white text-xs mt-1 font-sans font-semibold bg-emerald-950/40 p-2 rounded border border-emerald-500/20">{translatedText}</p>
                          </div>
                        )}
                      </div>
 
-                     <div className="text-[9px] opacity-45 uppercase text-right tracking-widest mt-4">
+                     <div className="text-[9px] text-teal-500/80 font-bold uppercase text-right tracking-widest mt-4">
                        CONFIDENCE LEVEL: {voiceState === 'completed' ? '98.4%' : 'N/A'}
                      </div>
                    </div>
                  </div>
+
                </div>
              </div>
 
