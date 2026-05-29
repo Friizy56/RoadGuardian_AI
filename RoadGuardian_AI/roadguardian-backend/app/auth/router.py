@@ -11,7 +11,7 @@ from sqlalchemy import select
 
 from app.auth.dependencies import get_password_hash, verify_password, create_access_token, get_current_user
 from app.database import get_db
-from typing import Any
+from typing import Any, List
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -78,7 +78,44 @@ async def login_user(payload: UserLogin, db: AsyncSession = Depends(get_db)):
     token = create_access_token(data={"sub": user.email})
     return {"access_token": token, "token_type": "bearer"}
 
+class UserSync(BaseModel):
+    full_name: str | None = None
+    role: str = "citizen"
+
 @router.get("/me", response_model=UserResponse)
 async def get_current_user_profile(current_user: Any = Depends(get_current_user)):
     """Get authenticated user profile"""
     return current_user
+
+@router.post("/sync", response_model=UserResponse)
+async def sync_user(
+    payload: UserSync,
+    current_user: Any = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Synchronize user metadata and role from frontend session.
+    Automatically called on successful frontend Supabase/OAuth state changes.
+    """
+    if payload.full_name:
+        current_user.full_name = payload.full_name
+    
+    if payload.role in ["citizen", "authority"]:
+        # For demonstration/testing, allow any email to assume the authority role
+        current_user.role = payload.role
+        
+    await db.commit()
+    await db.refresh(current_user)
+    return current_user
+
+@router.get("/leaderboard", response_model=List[UserResponse])
+async def get_leaderboard(db: AsyncSession = Depends(get_db)):
+    """Get top 100 users sorted by points for the leaderboard"""
+    from app.models.hazard import User
+    
+    result = await db.execute(
+        select(User)
+        .order_by(User.points.desc())
+        .limit(100)
+    )
+    return result.scalars().all()

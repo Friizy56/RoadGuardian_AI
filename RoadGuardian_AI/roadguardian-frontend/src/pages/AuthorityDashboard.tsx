@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { 
@@ -42,14 +42,6 @@ export const AuthorityDashboard = () => {
   const ecoMaterial = Math.round(budget * 82);
   const treesPlanted = Math.round(co2Saved * 45);
 
-  const statesData = [
-    { name: 'District of Columbia', safetyScore: 84, responseTime: '2.4 hrs', hazards: 142, trend: 'decreasing' },
-    { name: 'Maryland Region', safetyScore: 78, responseTime: '4.1 hrs', hazards: 489, trend: 'stable' },
-    { name: 'Virginia Territory', safetyScore: 71, responseTime: '5.8 hrs', hazards: 612, trend: 'increasing' },
-    { name: 'Delaware Corridor', safetyScore: 89, responseTime: '1.9 hrs', hazards: 89, trend: 'decreasing' },
-    { name: 'Pennsylvania Central', safetyScore: 64, responseTime: '8.2 hrs', hazards: 924, trend: 'increasing' },
-  ];
-
   // Analytics State
   const [loadingAnalytics, setLoadingAnalytics] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<any>(null);
@@ -76,7 +68,7 @@ export const AuthorityDashboard = () => {
   const [isResolving, setIsResolving] = useState(false);
 
   // Fetch functions
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     setLoadingAnalytics(true);
     try {
       const response = await api.get('/hazards/dashboard');
@@ -87,9 +79,9 @@ export const AuthorityDashboard = () => {
     } finally {
       setLoadingAnalytics(false);
     }
-  };
+  }, []);
 
-  const fetchPending = async () => {
+  const fetchPending = useCallback(async () => {
     setLoadingPending(true);
     try {
       const response = await api.get('/hazards/authority/pending');
@@ -101,9 +93,9 @@ export const AuthorityDashboard = () => {
     } finally {
       setLoadingPending(false);
     }
-  };
+  }, []);
 
-  const fetchActive = async () => {
+  const fetchActive = useCallback(async () => {
     setLoadingActive(true);
     try {
       const response = await api.get('/hazards/authority/active');
@@ -114,7 +106,7 @@ export const AuthorityDashboard = () => {
     } finally {
       setLoadingActive(false);
     }
-  };
+  }, []);
 
   // Run initial loading based on active tab
   useEffect(() => {
@@ -125,7 +117,7 @@ export const AuthorityDashboard = () => {
     } else if (activeTab === 'active') {
       fetchActive();
     }
-  }, [activeTab]);
+  }, [activeTab, fetchAnalytics, fetchPending, fetchActive]);
 
   // Bulk actions
   const handleToggleSelect = (id: number) => {
@@ -211,6 +203,21 @@ export const AuthorityDashboard = () => {
       });
 
       toast.success(`Hazard #${resolvingHazard.id} marked as fully resolved.`);
+      
+      // VIP DEMO: Simulate a WhatsApp notification to the citizen
+      setTimeout(() => {
+        toast.custom((t) => (
+          <div className="bg-[#075E54] text-white p-4 rounded-xl shadow-2xl max-w-sm w-full flex gap-3 border border-[#25D366]/30 animate-in slide-in-from-right-10">
+            <div className="bg-[#25D366] w-10 h-10 rounded-full flex items-center justify-center font-bold shrink-0 text-white shadow-inner">GOV</div>
+            <div>
+              <p className="font-bold text-sm flex items-center gap-1">Govt. of India Update <CheckCircle2 className="w-3 h-3 text-[#34B7F1]" /></p>
+              <p className="text-xs opacity-90 mt-1 leading-relaxed">Dear Citizen, your reported hazard #{resolvingHazard.id} has been resolved by our crews. Thank you for making India safer! 🇮🇳</p>
+              <p className="text-[9px] opacity-70 mt-2 uppercase tracking-widest font-mono">WhatsApp Official Business</p>
+            </div>
+          </div>
+        ), { duration: 6000, position: 'bottom-right' });
+      }, 1500);
+
       setResolvingHazard(null);
       setResolvedImage(null);
       setResolutionNotes('');
@@ -786,58 +793,6 @@ export const AuthorityDashboard = () => {
               </CardContent>
             </Card>
           </div>
-
-          {/* National State-By-State Operations Table */}
-          <Card className="bg-muted/10 backdrop-blur-sm border-border/80">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <BarChart3 className="w-5 h-5 text-cyan-400" /> State-by-State Road Safety Control Index
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">High-level territorial safety scorecards managed under central authority supervision.</p>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left border-collapse">
-                  <thead>
-                    <tr className="border-b border-border/60 text-muted-foreground text-xs uppercase tracking-wider font-bold">
-                      <th className="py-3 px-4">Territory / State</th>
-                      <th className="py-3 px-4 text-center">Safety Index</th>
-                      <th className="py-3 px-4 text-center">Active Hazards</th>
-                      <th className="py-3 px-4 text-center">Avg Dispatch Time</th>
-                      <th className="py-3 px-4 text-right">Trend Direction</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border/40 font-medium">
-                    {statesData.map((st, i) => (
-                      <tr key={i} className="hover:bg-muted/5 transition-colors">
-                        <td className="py-3 px-4 font-bold text-foreground">{st.name}</td>
-                        <td className="py-3 px-4 text-center">
-                          <span className={`px-2.5 py-0.5 rounded-full text-xs font-black ${
-                            st.safetyScore >= 80 
-                              ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
-                              : st.safetyScore >= 70
-                              ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-                              : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                          }`}>
-                            {st.safetyScore}%
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-center text-muted-foreground">{st.hazards}</td>
-                        <td className="py-3 px-4 text-center text-muted-foreground">{st.responseTime}</td>
-                        <td className="py-3 px-4 text-right">
-                          <span className={`text-xs font-bold ${
-                            st.trend === 'decreasing' ? 'text-green-400' : st.trend === 'increasing' ? 'text-red-400' : 'text-muted-foreground'
-                          }`}>
-                            {st.trend === 'decreasing' ? '↘ Improving' : st.trend === 'increasing' ? '↗ Critical' : '→ Stable'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       )}
 

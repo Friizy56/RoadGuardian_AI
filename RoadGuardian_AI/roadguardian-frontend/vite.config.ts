@@ -53,6 +53,44 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: path.resolve(__dirname, '../roadguardian-backend/static'),
     emptyOutDir: true,
-    assetsDir: 'assets'
+    assetsDir: 'assets',
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return undefined;
+          }
+
+          if (
+            id.includes('react') ||
+            id.includes('react-dom') ||
+            id.includes('react-router') ||
+            id.includes('@tanstack/react-query') ||
+            id.includes('zustand') ||
+            id.includes('react-hot-toast')
+          ) {
+            return 'vendor-react';
+          }
+
+          if (id.includes('framer-motion')) {
+            return 'vendor-motion';
+          }
+
+          if (id.includes('maplibre-gl')) {
+            return 'vendor-map';
+          }
+
+          if (id.includes('recharts')) {
+            return 'vendor-charts';
+          }
+
+          if (id.includes('axios') || id.includes('@supabase')) {
+            return 'vendor-data';
+          }
+
+          return undefined;
+        }
+      }
+    }
   }
 }));

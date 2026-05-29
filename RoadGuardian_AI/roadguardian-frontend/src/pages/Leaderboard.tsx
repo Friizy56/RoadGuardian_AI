@@ -2,15 +2,22 @@ import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Trophy, BarChart3, AlertTriangle, FileText } from 'lucide-react';
 
-const mockLeaderboard = [
-  { id: '1', name: 'Alex Johnson', points: 2450, reports: 128, rank: 'CIVIC HERO' },
-  { id: '2', name: 'Sarah Smith', points: 2100, reports: 104, rank: 'ELITE REPORTER' },
-  { id: '3', name: 'Michael Chen', points: 1950, reports: 89, rank: 'ELITE REPORTER' },
-  { id: '4', name: 'Emily Davis', points: 1800, reports: 76, rank: 'VETERAN' },
-  { id: '5', name: 'David Wilson', points: 1650, reports: 62, rank: 'VETERAN' },
-];
+import { api } from '@/services/api';
 
 export const Leaderboard = () => {
+  const [leaderboard, setLeaderboard] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    const fetchLeaderboard = async () => {
+      try {
+        const response = await api.get('/auth/leaderboard');
+        setLeaderboard(response.data);
+      } catch (error) {
+        console.error("Failed to fetch leaderboard", error);
+      }
+    };
+    fetchLeaderboard();
+  }, []);
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b-2 border-[#138808] pb-4">
@@ -26,7 +33,7 @@ export const Leaderboard = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         {[1, 0, 2].map((idx) => {
-          const user = mockLeaderboard[idx];
+          const user = leaderboard[idx];
           if (!user) return null;
           
           const rankNum = idx + 1;
@@ -40,15 +47,15 @@ export const Leaderboard = () => {
               </CardHeader>
               <CardContent className="flex flex-col items-center p-6 text-center space-y-4">
                 <div>
-                  <h3 className="font-black uppercase text-lg text-foreground tracking-wider">{user.name}</h3>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#000080] dark:text-primary mt-1">{user.rank}</p>
+                  <h3 className="font-black uppercase text-lg text-foreground tracking-wider">{user.full_name || user.email.split('@')[0]}</h3>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#000080] dark:text-primary mt-1">{user.points >= 2000 ? 'CIVIC HERO' : user.points >= 1000 ? 'ELITE REPORTER' : 'VETERAN'}</p>
                 </div>
                 
                 <table className="w-full text-left text-xs font-mono border border-border">
                    <tbody className="divide-y divide-border bg-slate-50 dark:bg-muted/30">
                      <tr>
                        <td className="py-2 px-3 font-bold text-muted-foreground uppercase w-1/2">Verified Logs</td>
-                       <td className="py-2 px-3 font-black">{user.reports}</td>
+                       <td className="py-2 px-3 font-black">{Math.floor(user.points / 50)}</td>
                      </tr>
                      <tr>
                        <td className="py-2 px-3 font-bold text-muted-foreground uppercase">Civic Points</td>
@@ -79,19 +86,19 @@ export const Leaderboard = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {mockLeaderboard.slice(3).map((user, idx) => (
+              {leaderboard.slice(3).map((user, idx) => (
                 <tr key={user.id} className="bg-white dark:bg-card hover:bg-slate-50 dark:hover:bg-muted/30 transition-colors">
                   <td className="px-6 py-3 font-mono font-bold text-foreground text-center border-r border-border">
                     {idx + 4}
                   </td>
                   <td className="px-6 py-3 font-bold uppercase tracking-wider text-foreground border-r border-border">
-                    {user.name}
+                    {user.full_name || user.email.split('@')[0]}
                   </td>
                   <td className="px-6 py-3 text-[10px] font-bold uppercase tracking-wider text-muted-foreground border-r border-border">
-                    {user.rank}
+                    {user.points >= 2000 ? 'CIVIC HERO' : user.points >= 1000 ? 'ELITE REPORTER' : 'VETERAN'}
                   </td>
                   <td className="px-6 py-3 text-right font-mono font-medium text-foreground border-r border-border">
-                    {user.reports}
+                    {Math.floor(user.points / 50)}
                   </td>
                   <td className="px-6 py-3 text-right font-mono font-black text-[#138808] dark:text-success">
                     {user.points}

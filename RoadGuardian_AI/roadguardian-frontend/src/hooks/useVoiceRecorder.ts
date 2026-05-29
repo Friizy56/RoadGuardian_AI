@@ -4,6 +4,8 @@ export const useVoiceRecorder = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const mediaStreamRef = useRef<MediaStream | null>(null);
@@ -15,11 +17,11 @@ export const useVoiceRecorder = () => {
         mediaRecorderRef.current.stop();
       }
       mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
-      if (audioUrl) {
-        URL.revokeObjectURL(audioUrl);
+      if (audioUrlRef.current) {
+        URL.revokeObjectURL(audioUrlRef.current);
       }
     };
-  }, [audioUrl]);
+  }, []);
 
   const startRecording = async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
@@ -42,10 +44,12 @@ export const useVoiceRecorder = () => {
       recorder.onstop = () => {
         const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         const url = URL.createObjectURL(blob);
-        if (audioUrl) {
-          URL.revokeObjectURL(audioUrl);
+        if (audioUrlRef.current) {
+          URL.revokeObjectURL(audioUrlRef.current);
         }
+        audioUrlRef.current = url;
         setAudioUrl(url);
+        setAudioBlob(blob);
         setIsRecording(false);
         setTranscript((prev) => prev || 'Audio recorded. Please edit or confirm the transcript.');
         mediaStreamRef.current?.getTracks().forEach((track) => track.stop());
@@ -69,5 +73,5 @@ export const useVoiceRecorder = () => {
     setIsRecording(false);
   };
 
-  return { isRecording, transcript, audioUrl, startRecording, stopRecording, setTranscript };
+  return { isRecording, transcript, audioUrl, audioBlob, startRecording, stopRecording, setTranscript };
 };

@@ -100,6 +100,7 @@ class HazardResponse(BaseModel):
     resolved_by_id: Optional[int] = Field(None, description="User ID of the authority who resolved the report")
     resolved_by_name: Optional[str] = Field(None, description="Name of the authority who resolved the report")
     reporter_name: Optional[str] = Field(None, description="Full name or credential of the reporting user")
+    ai_analysis_available: bool = Field(True, description="Whether AI analysis was available for this report")
 
     @model_validator(mode="before")
     @classmethod

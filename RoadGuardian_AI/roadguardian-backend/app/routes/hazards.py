@@ -12,7 +12,7 @@ import time
 import shutil
 import logging
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status, UploadFile, File, Form
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,7 +55,11 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 try:
     from app.ai_engine.vision import detect_hazard_severity
+    AI_ANALYSIS_AVAILABLE = True
 except (ImportError, AttributeError):
+    AI_ANALYSIS_AVAILABLE = False
+    logger.warning("Vision AI engine is unavailable; falling back to a default severity score.")
+
     async def detect_hazard_severity(image_path: str) -> float:
         """
         Mock fallback evaluator for YOLO model.
@@ -67,6 +71,8 @@ except (ImportError, AttributeError):
 try:
     from app.ai_engine.voice import transcribe_voice_report
 except (ImportError, AttributeError):
+    logger.warning("Voice AI engine is unavailable; falling back to a default transcript.")
+
     async def transcribe_voice_report(audio_path: str) -> str:
         """
         Mock fallback transcription layer for Whisper.
@@ -132,7 +138,13 @@ async def upload_hazard(
         )
 
     # Evaluate using YOLO model stub
-    confidence = await detect_hazard_severity(filepath)
+    ai_analysis_available = AI_ANALYSIS_AVAILABLE
+    try:
+        confidence = await detect_hazard_severity(filepath)
+    except Exception as e:
+        logger.exception("Failed to analyze image with AI")
+        confidence = 0.0
+        ai_analysis_available = False
 
     # Build hazard creation arguments dictionary
     hazard_data = {
@@ -141,6 +153,7 @@ async def upload_hazard(
         "longitude": longitude,
         "description": description,
         "confidence_score": confidence,
+        "ai_analysis_available": ai_analysis_available,
         "traffic_density": "medium",  # Standard baseline fallback
         "weather": "clear"            # Standard baseline fallback
     }
@@ -211,7 +224,13 @@ async def upload_voice_hazard(
         )
 
     # Transcribe audio using Whisper model stub
-    transcript = await transcribe_voice_report(filepath)
+    ai_analysis_available = True
+    try:
+        transcript = await transcribe_voice_report(filepath)
+    except Exception as e:
+        logger.exception("Failed to transcribe audio with AI")
+        transcript = ""
+        ai_analysis_available = False
 
     # Standard parser logic mapping transcripts to hazard types
     # Simple semantic keyword scanning
@@ -235,6 +254,7 @@ async def upload_voice_hazard(
         "longitude": longitude,
         "description": f"[Voice Transcript]: {transcript}",
         "confidence_score": 0.80,     # Standard confidence baseline for voice transcripts
+        "ai_analysis_available": ai_analysis_available,
         "traffic_density": "medium",
         "weather": "clear"
     }
@@ -652,6 +672,19 @@ async def resolve_hazard(
         logger.warning(f"Failed to broadcast resolution update: {e}")
         
     return hazard
+
+
+@router.get("/public/active", response_model=List[HazardResponse])
+async def get_public_active_hazards(db: AsyncSession = Depends(get_db)):
+    """
+    Get all active hazards (pending or verified) for public viewing (e.g. Heatmap).
+    """
+    result = await db.execute(
+        select(Hazard)
+        .where(Hazard.status.in_(["pending", "verified"]))
+        .options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
+    )
+    return result.scalars().all()
 
 
 @router.get("/predictions/hotspots", response_model=HotspotsResponse)

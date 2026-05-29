@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Activity, Map, Trophy, ShieldCheck, Zap, Globe2, AlertTriangle, Building2, UserCircle2, Radar, Shield, Server, Mic, PhoneCall, FileText, ChevronRight, ChevronDown, Info } from 'lucide-react';
@@ -11,6 +11,7 @@ export const Landing = () => {
   const [activeDots, setActiveDots] = useState([true, false, true, false, true]);
   const [scanDegree, setScanDegree] = useState(0);
   const [expandedService, setExpandedService] = useState<number | null>(null);
+  const voiceTimersRef = useRef<number[]>([]);
 
   // Multilingual Voice AI simulation states
   const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'transcribing' | 'completed'>('idle');
@@ -18,13 +19,18 @@ export const Landing = () => {
   const [transcriptText, setTranscriptText] = useState('');
   const [translatedText, setTranslatedText] = useState('');
 
+  const clearVoiceTimers = () => {
+    voiceTimersRef.current.forEach((timerId) => window.clearTimeout(timerId));
+    voiceTimersRef.current = [];
+  };
+
   const triggerVoiceDemo = () => {
     setVoiceState('listening');
     setTranscriptText('Listening to microphone input...');
     setTranslatedText('');
     
     // Simulate listening phase
-    setTimeout(() => {
+    const listeningTimer = window.setTimeout(() => {
       setVoiceState('transcribing');
       if (voiceLang === 'Hindi') {
         setTranscriptText('सड़क के बीच में एक बहुत बड़ा गड्ढा है जिससे गाड़ियाँ टकरा रही हैं।');
@@ -35,7 +41,7 @@ export const Landing = () => {
       }
       
       // Simulate translation/structuring phase
-      setTimeout(() => {
+      const translatingTimer = window.setTimeout(() => {
         setVoiceState('completed');
         if (voiceLang === 'Hindi') {
           setTranslatedText('Severe pothole detected in the center of the lane. Categorized as critical high severity.');
@@ -45,7 +51,9 @@ export const Landing = () => {
           setTranslatedText('Large pothole detected on the central highway segment. Categorized as critical.');
         }
       }, 2000);
+      voiceTimersRef.current.push(translatingTimer);
     }, 2000);
+    voiceTimersRef.current.push(listeningTimer);
   };
 
 
@@ -63,6 +71,23 @@ export const Landing = () => {
     }, 20);
     return () => clearInterval(interval);
   }, []);
+  
+  useEffect(() => {
+    return () => {
+      clearVoiceTimers();
+    };
+  }, []);
+  
+  const voiceConfidenceLabel = voiceState === 'completed' ? '98.4%' : voiceState === 'transcribing' ? '74.2%' : 'N/A';
+  const voiceStatusLabel = voiceState === 'listening'
+    ? 'Microphone input is being captured'
+    : voiceState === 'transcribing'
+    ? 'Whisper is resolving the speech payload'
+    : voiceState === 'completed'
+    ? 'Transcript translated and structured successfully'
+    : 'Ready for a new command';
+  
+  const languageLabel = voiceLang === 'Hindi' ? 'Hindi · हिंदी' : voiceLang === 'Spanish' ? 'Spanish · Español' : 'German · Deutsch';
 
   const features = [
     { id: 0, icon: Activity, title: 'AI Hazard Detection', desc: 'Real-time severity analysis utilizing advanced computer vision networks.', code: 'MOD-01A', fullDesc: 'This module utilizes federated machine learning to process citizen-uploaded media and automatically categorize road hazards (potholes, cracks, waterlogging) by severity level, expediting municipal dispatch.' },
@@ -126,7 +151,7 @@ export const Landing = () => {
       <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-[#000080]/5 dark:from-primary/10 to-transparent pointer-events-none z-0"></div>
 
       {/* IRCTC-Style Dense Hero Section */}
-      <section className="w-full relative z-10 overflow-hidden py-8 px-4 md:px-8 max-w-7xl mx-auto">
+      <section className="w-full relative z-10 py-8 px-4 md:px-8 max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           
           {/* Main Information Panel */}
@@ -260,7 +285,9 @@ export const Landing = () => {
                  </div>
               </motion.div>
              </div>
-
+           </div>
+           
+           <div className="lg:col-span-12 lg:order-last space-y-6 mt-4">
              {/* Dynamic AI Voice Command & Translation Simulation Panel */}
              <div className="bg-white/90 dark:bg-card/85 backdrop-blur-md border border-border shadow-lg p-5 rounded-sm mt-6">
                <div className="flex items-center justify-between border-b border-border pb-3 mb-5">
@@ -332,33 +359,86 @@ export const Landing = () => {
 
                  {/* Console Logs / Audio Transcript Terminal */}
                  <div className="md:col-span-8 space-y-3 font-mono">
-                   <div className="bg-[#040D1A] text-slate-300 p-4 rounded-sm border border-border/80 text-[11px] leading-relaxed relative min-h-[170px] flex flex-col justify-between shadow-inner">
-                     <div>
-                       <span className="text-teal-400 font-bold flex items-center gap-1.5 text-2xs uppercase tracking-widest border-b border-[#000080] pb-1.5 mb-2">
-                         <Server className="w-3.5 h-3.5" /> AI Real-Time Processing Console
-                       </span>
-                       
-                       <p className="text-slate-400 mt-1">
-                         <span className="text-teal-400 font-black">&gt;</span> SYSTEM STATE: <span className="font-extrabold text-white bg-slate-800 px-1.5 py-0.5 rounded text-xs">{voiceState.toUpperCase()}</span>
-                       </p>
+                   <div className="grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
+                     <div className="bg-[#040D1A] text-slate-300 p-4 rounded-sm border border-border/80 text-[11px] leading-relaxed relative min-h-[220px] flex flex-col justify-between shadow-inner">
+                       <div>
+                         <span className="text-teal-400 font-bold flex items-center gap-1.5 text-2xs uppercase tracking-widest border-b border-[#000080] pb-1.5 mb-2">
+                           <Server className="w-3.5 h-3.5" /> AI Real-Time Processing Console
+                         </span>
+                         
+                         <p className="text-slate-400 mt-1">
+                           <span className="text-teal-400 font-black">&gt;</span> SYSTEM STATE: <span className="font-extrabold text-white bg-slate-800 px-1.5 py-0.5 rounded text-xs">{voiceState.toUpperCase()}</span>
+                         </p>
 
-                       {transcriptText && (
-                         <div className="mt-3">
-                           <span className="text-[#FF9933] font-bold uppercase text-[9px] block">Transcribed Native Text:</span>
-                           <p className="text-slate-100 text-xs mt-1 font-sans font-medium">{transcriptText}</p>
+                         <div className="mt-4 grid gap-2 sm:grid-cols-3">
+                           <div className="bg-slate-900/70 border border-slate-700 rounded p-2">
+                             <div className="text-[9px] uppercase text-slate-500 font-bold tracking-widest">Language</div>
+                             <div className="text-xs font-bold text-white mt-1">{languageLabel}</div>
+                           </div>
+                           <div className="bg-slate-900/70 border border-slate-700 rounded p-2">
+                             <div className="text-[9px] uppercase text-slate-500 font-bold tracking-widest">Pipeline</div>
+                             <div className="text-xs font-bold text-teal-300 mt-1">Speech → STT → NLP</div>
+                           </div>
+                           <div className="bg-slate-900/70 border border-slate-700 rounded p-2">
+                             <div className="text-[9px] uppercase text-slate-500 font-bold tracking-widest">Confidence</div>
+                             <div className="text-xs font-bold text-emerald-300 mt-1">{voiceConfidenceLabel}</div>
+                           </div>
                          </div>
-                       )}
 
-                       {translatedText && (
-                         <div className="mt-3 animate-fadeIn">
-                           <span className="text-emerald-400 font-bold uppercase text-[9px] block">Gemini NLP Translated Output (English):</span>
-                           <p className="text-white text-xs mt-1 font-sans font-semibold bg-emerald-950/40 p-2 rounded border border-emerald-500/20">{translatedText}</p>
-                         </div>
-                       )}
+                         {transcriptText ? (
+                           <div className="mt-3">
+                             <span className="text-[#FF9933] font-bold uppercase text-[9px] block">Transcribed Native Text:</span>
+                             <p className="text-slate-100 text-xs mt-1 font-sans font-medium">{transcriptText}</p>
+                           </div>
+                         ) : (
+                           <div className="mt-4 border border-dashed border-slate-700 rounded p-3 text-slate-500 text-xs bg-slate-950/40">
+                             Speak a hazard description to populate the translation console.
+                           </div>
+                         )}
+
+                         {translatedText ? (
+                           <div className="mt-3 animate-fadeIn">
+                             <span className="text-emerald-400 font-bold uppercase text-[9px] block">Gemini NLP Translated Output (English):</span>
+                             <p className="text-white text-xs mt-1 font-sans font-semibold bg-emerald-950/40 p-2 rounded border border-emerald-500/20">{translatedText}</p>
+                           </div>
+                         ) : (
+                           <div className="mt-3 text-[10px] text-slate-500 uppercase tracking-widest">
+                             {voiceStatusLabel}
+                           </div>
+                         )}
+                       </div>
+
+                       <div className="text-[9px] text-teal-500/80 font-bold uppercase text-right tracking-widest mt-4">
+                         CONFIDENCE LEVEL: {voiceConfidenceLabel}
+                       </div>
                      </div>
 
-                     <div className="text-[9px] text-teal-500/80 font-bold uppercase text-right tracking-widest mt-4">
-                       CONFIDENCE LEVEL: {voiceState === 'completed' ? '98.4%' : 'N/A'}
+                     <div className="bg-slate-950/80 text-slate-200 p-4 rounded-sm border border-slate-800 min-h-[220px] flex flex-col justify-between shadow-inner">
+                       <div>
+                         <div className="text-teal-400 font-bold flex items-center gap-1.5 text-2xs uppercase tracking-widest border-b border-slate-800 pb-1.5 mb-3">
+                           <Zap className="w-3.5 h-3.5" /> Translation Summary
+                         </div>
+
+                         <div className="space-y-3">
+                           <div className="flex items-center justify-between bg-white/5 rounded px-3 py-2 border border-white/5">
+                             <span className="text-[10px] uppercase tracking-widest text-slate-400">Status</span>
+                             <span className="text-xs font-black text-white">{voiceState.toUpperCase()}</span>
+                           </div>
+                           <div className="flex items-center justify-between bg-white/5 rounded px-3 py-2 border border-white/5">
+                             <span className="text-[10px] uppercase tracking-widest text-slate-400">Detected Intent</span>
+                             <span className="text-xs font-black text-[#FF9933]">Road Hazard</span>
+                           </div>
+                           <div className="flex items-center justify-between bg-white/5 rounded px-3 py-2 border border-white/5">
+                             <span className="text-[10px] uppercase tracking-widest text-slate-400">Severity Cue</span>
+                             <span className="text-xs font-black text-emerald-300">Critical lane obstruction</span>
+                           </div>
+                         </div>
+                       </div>
+
+                       <div className="mt-4 grid grid-cols-2 gap-2 text-[10px] uppercase tracking-widest font-bold">
+                         <div className="bg-[#000080]/20 border border-[#000080]/30 rounded px-3 py-2 text-center text-[#FF9933]">Live STT</div>
+                         <div className="bg-emerald-500/10 border border-emerald-500/20 rounded px-3 py-2 text-center text-emerald-300">NLP Ready</div>
+                       </div>
                      </div>
                    </div>
                  </div>
@@ -405,7 +485,7 @@ export const Landing = () => {
            </div>
            
            {/* Right Column: IRCTC-Style Dense Panels */}
-          <div className="lg:col-span-4 flex flex-col gap-4 relative z-10">
+          <div className="lg:col-span-4 flex flex-col gap-4 relative z-10 lg:sticky lg:top-8 self-start">
             
             {/* Login Pane */}
             <div className="bg-white/95 dark:bg-card/95 backdrop-blur-md border-t-4 border-t-[#FF9933] border border-border shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgba(255,255,255,0.02)] rounded-sm overflow-hidden">

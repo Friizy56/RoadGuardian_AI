@@ -3,14 +3,28 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/authStore';
-import { useReportStore } from '@/store/reportStore';
+import { api } from '@/services/api';
 import { AnimatedCounter } from '@/components/gamification/AnimatedCounter';
 import { ShieldPlus, Activity, Trophy, MapPin, CalendarClock, Server, AlertTriangle } from 'lucide-react';
 
 export const Dashboard = () => {
   const { user } = useAuthStore();
-  const { reports } = useReportStore();
+  const [reports, setReports] = React.useState<any[]>([]);
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const response = await api.get('/hazards/my-reports');
+        setReports(response.data);
+      } catch (error) {
+        console.error("Failed to fetch reports:", error);
+      }
+    };
+    if (user) {
+      fetchReports();
+    }
+  }, [user]);
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto px-2">
@@ -88,21 +102,21 @@ export const Dashboard = () => {
                <tbody className="divide-y divide-border">
                  {reports.slice(0, 5).map(report => (
                    <tr key={report.id} className="hover:bg-slate-50 dark:hover:bg-muted/30 transition-colors">
-                     <td className="py-4 px-5 font-mono font-bold text-[#000080] dark:text-primary text-[13px]">{report.code}</td>
-                     <td className="py-4 px-5 font-bold text-foreground uppercase">{report.type}</td>
+                     <td className="py-4 px-5 font-mono font-bold text-[#000080] dark:text-primary text-[13px]">HZ-{report.id}</td>
+                     <td className="py-4 px-5 font-bold text-foreground uppercase">{report.hazard_type.replace('_', ' ')}</td>
                      <td className="py-4 px-5">
-                       <div className="flex items-center text-muted-foreground font-medium"><MapPin className="w-4 h-4 mr-1.5" /> {report.location}</div>
-                       <div className="flex items-center text-muted-foreground text-xs mt-1.5"><CalendarClock className="w-3.5 h-3.5 mr-1.5" /> {report.date}</div>
+                       <div className="flex items-center text-muted-foreground font-medium"><MapPin className="w-4 h-4 mr-1.5" /> {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}</div>
+                       <div className="flex items-center text-muted-foreground text-xs mt-1.5"><CalendarClock className="w-3.5 h-3.5 mr-1.5" /> {new Date(report.created_at).toLocaleDateString()}</div>
                      </td>
                      <td className="py-4 px-5">
                         <span className={`px-2.5 py-1 rounded-sm font-bold uppercase tracking-wider border text-xs ${
-                          report.status === 'Resolved' ? 'bg-success/10 text-success border-success/30' : 
-                          report.status === 'Pending' ? 'bg-destructive/10 text-destructive border-destructive/30' : 
+                          report.status === 'resolved' ? 'bg-success/10 text-success border-success/30' : 
+                          report.status === 'pending' ? 'bg-destructive/10 text-destructive border-destructive/30' : 
                           'bg-muted text-foreground border-border'
                         }`}>
                           {report.status}
                         </span>
-                        <div className="font-mono text-xs mt-2.5 font-bold text-muted-foreground">SEV: {report.severity}/10</div>
+                        <div className="font-mono text-xs mt-2.5 font-bold text-muted-foreground">SEV: {report.severity_score}/10</div>
                      </td>
                    </tr>
                  ))}
