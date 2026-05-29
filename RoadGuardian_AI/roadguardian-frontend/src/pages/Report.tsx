@@ -6,18 +6,21 @@ import { Input } from '@/components/ui/input';
 import { DetectionOverlay } from '@/components/hazard/DetectionOverlay';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { useVoiceRecorder } from '@/hooks/useVoiceRecorder';
-import { UploadCloud, Mic, MapPin, CheckCircle, MicOff, ShieldAlert, AlertTriangle, FileText } from 'lucide-react';
+import { UploadCloud, Mic, MapPin, CheckCircle, MicOff, ShieldAlert, AlertTriangle, FileText, Globe, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { api } from '@/services/api';
 import { useReportStore } from '@/store/reportStore';
 
 export const Report = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [image, setImage] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [aiResult, setAiResult] = useState<any>(null);
   
   const { coords, getLocation, loading: locLoading } = useGeolocation();
-  const { isRecording, transcript, audioUrl, startRecording, stopRecording, setTranscript } = useVoiceRecorder();
+  const { isRecording, transcript, audioUrl, audioBlob, startRecording, stopRecording, setTranscript } = useVoiceRecorder();
 
   const [manualLocation, setManualLocation] = useState({
     state: '',
@@ -26,11 +29,10 @@ export const Report = () => {
     pincode: ''
   });
 
-  const { addReport } = useReportStore();
-
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setImageFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setImage(reader.result as string);
@@ -42,21 +44,57 @@ export const Report = () => {
   const handleNext = () => setStep(s => Math.min(s + 1, 4));
   const handlePrev = () => setStep(s => Math.max(s - 1, 1));
 
-  const handleSubmit = () => {
-    const locString = [manualLocation.locality, manualLocation.district, manualLocation.state].filter(Boolean).join(', ') || 
-                      (coords ? `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}` : 'Unknown Location');
+  const handleSubmit = async () => {
+    const locString = [manualLocation.locality, manualLocation.district, manualLocation.state].filter(Boolean).join(', ');
+    
+    // Default coords to a mock central location if GPS wasn't used
+    const finalLat = coords ? coords.lat : 22.0;
+    const finalLng = coords ? coords.lng : 79.0;
+    const finalDescription = (locString ? `[Locality: ${locString}] ` : '') + (transcript || '');
 
-    addReport({
-      type: aiResult?.type || 'Unknown Hazard',
-      severity: aiResult?.severity || 5,
-      location: locString,
-      image: image || undefined,
-      transcript: transcript,
-      coords: coords
-    });
+    setIsSubmitting(true);
+    try {
+      let parsedType = 'other';
+      if (aiResult?.type) {
+        const t = aiResult.type.toLowerCase();
+        if (t.includes('pothole')) parsedType = 'pothole';
+        else if (t.includes('crack')) parsedType = 'crack';
+        else if (t.includes('water') || t.includes('flood')) parsedType = 'waterlogging';
+        else if (t.includes('divider') || t.includes('barrier')) parsedType = 'broken_dividers';
+        else if (t.includes('sign') || t.includes('board')) parsedType = 'missing_signs';
+      }
 
-    toast.success('Hazard reported successfully! You earned 50 points.');
-    navigate('/dashboard');
+      const formData = new FormData();
+      formData.append('latitude', String(finalLat));
+      formData.append('longitude', String(finalLng));
+
+      if (imageFile) {
+        formData.append('image', imageFile);
+        formData.append('hazard_type', parsedType);
+        formData.append('description', finalDescription);
+        
+        await api.post('/hazards/upload', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } else if (audioBlob) {
+        formData.append('audio', audioBlob, 'voice_report.webm');
+        await api.post('/hazards/voice-report', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+      } else {
+        toast.error("Please provide an image or voice recording");
+        setIsSubmitting(false);
+        return;
+      }
+
+      toast.success('Hazard reported successfully! You earned 50 points.');
+      navigate('/dashboard');
+    } catch (error) {
+      console.error("Submission failed", error);
+      toast.error("Failed to submit hazard report.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const isLocationComplete = coords || (manualLocation.state && manualLocation.district && manualLocation.locality);
@@ -129,6 +167,22 @@ export const Report = () => {
                       <div className="flex gap-3 h-12 items-center px-6 bg-destructive text-white font-bold text-xs uppercase tracking-wider animate-pulse rounded-sm">
                         <span className="w-2.5 h-2.5 rounded-full bg-white"></span> Recording in progress...
                       </div>
+                    )}
+                    {!isRecording && (
+                      <Button 
+                        type="button"
+                        onClick={() => {
+                           setTranscript('Hindi: "Yahan sadak par bohot bada gaddha hai."');
+                           toast.loading('Bhashini AI translating to English...', { duration: 2000 });
+                           setTimeout(() => {
+                              setTranscript('Large pothole on the road here.');
+                              toast.success('Bhashini AI translation complete');
+                           }, 2000);
+                        }}
+                        className="w-full sm:w-auto h-12 px-6 rounded-sm font-bold uppercase text-xs tracking-wider bg-[#FF9933]/10 text-[#FF9933] hover:bg-[#FF9933]/20 border border-[#FF9933]/30 flex items-center shadow-none"
+                      >
+                         <Globe className="w-4 h-4 mr-2" /> Bhashini AI Translate (Mock)
+                      </Button>
                     )}
                   </div>
                   <Input 
@@ -330,8 +384,8 @@ export const Report = () => {
 
               <div className="flex gap-4 p-6 border-t border-border bg-slate-50 dark:bg-muted/50 justify-between mt-auto">
                 <Button variant="outline" onClick={handlePrev} className="rounded-sm h-14 px-8 font-bold uppercase text-sm tracking-wider border-border bg-white dark:bg-card">Edit Details</Button>
-                <Button onClick={handleSubmit} className="w-full sm:w-auto bg-[#138808] hover:bg-green-700 text-white h-14 px-12 font-black uppercase text-sm tracking-widest shadow-md">
-                  Submit Official Report
+                <Button onClick={handleSubmit} disabled={isSubmitting} className="w-full sm:w-auto bg-[#138808] hover:bg-green-700 text-white h-14 px-12 font-black uppercase text-sm tracking-widest shadow-md flex items-center">
+                  {isSubmitting ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Submitting...</> : 'Submit Official Report'}
                 </Button>
               </div>
             </div>

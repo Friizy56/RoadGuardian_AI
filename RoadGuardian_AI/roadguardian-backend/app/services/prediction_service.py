@@ -8,7 +8,7 @@ Author: RoadGuardian AI Team
 Last Updated: 2026-05-27
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from collections import defaultdict, Counter
 from typing import List, Dict
 from app.models.hazard import Hazard
@@ -28,7 +28,7 @@ class PredictionService:
         Clusters coordinates into approx 1.1km grid areas (0.01 degree increments).
         """
         # Get hazards from last N days that have been verified or resolved
-        cutoff_date = datetime.utcnow() - timedelta(days=days_lookback)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=days_lookback)
         result = await db.execute(
             select(Hazard)
             .where(Hazard.created_at >= cutoff_date)
@@ -57,7 +57,7 @@ class PredictionService:
                 # Calculate trend based on reports recency within the last 7 days
                 recent_count = sum(
                     1 for h in hazards_in_grid 
-                    if h.created_at >= datetime.utcnow() - timedelta(days=7)
+                    if h.created_at >= datetime.now(timezone.utc) - timedelta(days=7)
                 )
                 
                 # Determine average severity rating within cluster
@@ -93,7 +93,7 @@ class PredictionService:
         Evaluates historical reports over the last 60 days.
         """
         # Retrieve historical reports
-        cutoff = datetime.utcnow() - timedelta(days=60)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=60)
         result = await db.execute(
             select(Hazard).where(Hazard.created_at >= cutoff)
         )

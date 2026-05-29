@@ -7,8 +7,10 @@ Purpose: Async PostgreSQL connection via SQLAlchemy.
 import logging
 from contextlib import asynccontextmanager
 from typing import AsyncGenerator
+from uuid import uuid4
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy.pool import NullPool
 from sqlalchemy.orm import DeclarativeBase
 
 from app.config import settings
@@ -21,9 +23,14 @@ logger = logging.getLogger(__name__)
 def get_async_db_url(url: str) -> str:
     if not url: return ""
     if url.startswith("postgres://"):
-        return url.replace("postgres://", "postgresql+asyncpg://", 1)
+        url = url.replace("postgres://", "postgresql+asyncpg://", 1)
     if url.startswith("postgresql://"):
-        return url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+    if url.startswith("postgresql+asyncpg://") and "prepared_statement_cache_size=" not in url:
+        separator = "&" if "?" in url else "?"
+        url = f"{url}{separator}prepared_statement_cache_size=0"
+
     return url
 
 # ======================
@@ -34,11 +41,15 @@ async_url = get_async_db_url(settings.DATABASE_URL)
 if not async_url:
     raise ValueError("DATABASE_URL is empty")
 
+engine_connect_args = {"statement_cache_size": 0}
+engine_connect_args["prepared_statement_name_func"] = lambda: f"__asyncpg_{uuid4()}__"
+
 engine = create_async_engine(
     async_url,
     echo=settings.DEBUG,
     pool_pre_ping=True,
-    connect_args={"statement_cache_size": 0}
+    poolclass=NullPool,
+    connect_args=engine_connect_args
 )
 logger.info("✅ Connected to PostgreSQL (Supabase)")
 

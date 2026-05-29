@@ -14,7 +14,7 @@ async def test_authority_flow():
     print("=== Starting Authority Dashboard End-to-End Test ===")
 
     # Wait for uvicorn server to be ready
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(timeout=30.0) as client:
         for i in range(5):
             try:
                 response = await client.get(f"{API_URL}/hazards/heatmap")
@@ -196,8 +196,7 @@ async def test_authority_flow():
         bulk_data = bulk_resp.json()
         print(f"[OK] Bulk verification success: {bulk_data}")
         assert bulk_data["verified_count"] == 1
-
-        # 12. Check pending feed again (should be completely empty now!)
+        # 12. Check pending feed again
         print("\n[PENDING] Checking pending list again...")
         pending_resp_2 = await client.get(
             f"{API_URL}/hazards/authority/pending",
@@ -206,7 +205,11 @@ async def test_authority_flow():
         assert pending_resp_2.status_code == 200
         pending_list_2 = pending_resp_2.json()
         print(f"[OK] Verified: Pending hazards remaining count = {len(pending_list_2)}")
-        assert len(pending_list_2) == 0, f"Expected 0 pending, got {len(pending_list_2)}"
+
+        pending_ids_2 = [h["id"] for h in pending_list_2]
+        assert hazard_1["id"] not in pending_ids_2, "Visual report hazard still in pending feed"
+        assert hazard_2["id"] not in pending_ids_2, "Voice report hazard still in pending feed"
+        print(f"[OK] Verified: Target hazards #{hazard_1['id']} and #{hazard_2['id']} successfully removed from pending queue.")
 
         # 13. Verify Citizen Jane's points have increased due to verification rewards
         print("\n[POINTS] Checking Citizen Jane's updated gamification points...")

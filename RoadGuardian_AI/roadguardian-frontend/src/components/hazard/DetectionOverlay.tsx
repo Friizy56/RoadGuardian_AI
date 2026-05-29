@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { ScanSearch, ShieldAlert } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -12,9 +12,25 @@ interface DetectionOverlayProps {
 export const DetectionOverlay = ({ imageUrl, onAnalysisComplete }: DetectionOverlayProps) => {
   const [isAnalyzing, setIsAnalyzing] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const onAnalysisCompleteRef = useRef(onAnalysisComplete);
+  const timeoutRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    onAnalysisCompleteRef.current = onAnalysisComplete;
+  }, [onAnalysisComplete]);
 
   useEffect(() => {
     if (!imageUrl) return;
+
+    setIsAnalyzing(true);
+    setError(null);
+
+    const cleanupTimeout = () => {
+      if (timeoutRef.current !== null) {
+        window.clearTimeout(timeoutRef.current);
+        timeoutRef.current = null;
+      }
+    };
 
     const analyzeImage = async () => {
       try {
@@ -23,14 +39,14 @@ export const DetectionOverlay = ({ imageUrl, onAnalysisComplete }: DetectionOver
         if (!apiKey) {
           console.warn("VITE_GEMINI_API_KEY is missing. Falling back to mock data.");
           // Fallback to mock data if no key is provided
-          setTimeout(() => {
+          timeoutRef.current = window.setTimeout(() => {
             const hazardTypes = ["Major Pothole", "Pavement Crack", "Broken Road Divider", "Severe Waterlogging", "Signage Defect", "Manhole Displacement"];
             const randomType = hazardTypes[Math.floor(Math.random() * hazardTypes.length)];
             const randomSeverity = Number((Math.random() * 4.5 + 4.5).toFixed(1)); // 4.5 to 9.0
             const randomConfidence = Math.floor(Math.random() * 20) + 75; // 75% to 94%
 
             setIsAnalyzing(false);
-            onAnalysisComplete({
+            onAnalysisCompleteRef.current({
               severity: randomSeverity,
               type: randomType,
               confidence: randomConfidence
@@ -91,7 +107,7 @@ export const DetectionOverlay = ({ imageUrl, onAnalysisComplete }: DetectionOver
             confidence: Math.min(100, Math.max(1, Number(parsed.confidence ?? parsed.confidence_score ?? 50) || 50))
           };
           setIsAnalyzing(false);
-          onAnalysisComplete(normalized);
+          onAnalysisCompleteRef.current(normalized);
         } else {
           throw new Error("Failed to parse Gemini response as JSON");
         }
@@ -107,7 +123,7 @@ export const DetectionOverlay = ({ imageUrl, onAnalysisComplete }: DetectionOver
         const randomSeverity = Number((Math.random() * 4.5 + 4.5).toFixed(1)); // 4.5 to 9.0
         const randomConfidence = Math.floor(Math.random() * 25) + 65; // 65% to 89%
 
-        onAnalysisComplete({
+        onAnalysisCompleteRef.current({
           severity: randomSeverity,
           type: randomType,
           confidence: randomConfidence
@@ -118,7 +134,11 @@ export const DetectionOverlay = ({ imageUrl, onAnalysisComplete }: DetectionOver
 
     analyzeImage();
 
-  }, [imageUrl, onAnalysisComplete]);
+    return () => {
+      cleanupTimeout();
+    };
+
+  }, [imageUrl]);
 
   if (!imageUrl) return null;
 

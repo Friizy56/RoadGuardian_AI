@@ -1,5 +1,6 @@
 import logging
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, RedirectResponse
@@ -115,14 +116,21 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
 
 
-# Mount the web application static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+STATIC_DIR = Path(__file__).resolve().parent / "static"
+STATIC_INDEX = STATIC_DIR / "index.html"
+
+if STATIC_DIR.exists():
+    app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+else:
+    logger.warning("⚠️ Static directory not found; skipping static file mount.")
 
 
 # Core endpoints
 @app.get("/")
 async def root():
     """Redirects root welcome endpoint to interactive web application dashboard"""
+    if not STATIC_INDEX.exists():
+        return JSONResponse(status_code=503, content={"detail": "Frontend static assets are unavailable"})
     return RedirectResponse(url="/static/index.html")
 
 
@@ -130,6 +138,8 @@ async def root():
 @app.get("/authority")
 async def authority_page():
     """Serve SPA index for the Authority dashboard route."""
+    if not STATIC_INDEX.exists():
+        return JSONResponse(status_code=503, content={"detail": "Frontend static assets are unavailable"})
     return FileResponse(_STATIC_INDEX)
 
 
@@ -180,6 +190,8 @@ async def spa_fallback(full_path: str):
     first_seg = full_path.split('/', 1)[0] if full_path else ''
     if first_seg in ("static", "auth", "api", "docs"):
         raise HTTPException(status_code=404)
+    if not STATIC_INDEX.exists():
+        return JSONResponse(status_code=503, content={"detail": "Frontend static assets are unavailable"})
     return FileResponse(_STATIC_INDEX)
 
 

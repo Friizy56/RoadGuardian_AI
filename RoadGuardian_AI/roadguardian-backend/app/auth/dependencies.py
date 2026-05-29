@@ -5,7 +5,7 @@ Purpose: JWT handling, password hashing, and FastAPI user extraction dependency.
 Dependencies: jose, passlib, fastapi, sqlalchemy, app.config, app.database, app.models.hazard
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from fastapi import Depends, HTTPException, status
@@ -18,6 +18,18 @@ from sqlalchemy import select
 from app.config import settings
 from app.database import get_db
 from typing import Any
+
+# ======================
+# Supabase Integration
+# ======================
+from supabase import create_client, Client
+
+supabase_client = None
+if settings.SUPABASE_URL and settings.SUPABASE_ANON_KEY:
+    try:
+        supabase_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
+    except Exception as e:
+        print(f"Failed to initialize Supabase client in auth dependencies: {e}")
 
 # ======================
 # Security Configuration
@@ -42,7 +54,7 @@ def get_password_hash(password: str) -> str:
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     """Create signed JWT access token"""
     to_encode = data.copy()
-    expire = datetime.utcnow() + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
+    expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode.update({"exp": expire})
     return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
@@ -62,7 +74,7 @@ async def get_current_user(
 ) -> Any:
     """
     Dependency to extract and verify current authenticated user.
-    Raises 401 if token is invalid or user doesn't exist.
+    Supports local JWTs, Supabase OAuth JWTs, and VIP demo guest tokens.
     """
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
@@ -70,21 +82,60 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     
-    payload = decode_access_token(token)
-    if payload is None:
-        raise credentials_exception
-        
-    email: str = payload.get("sub")
-    if email is None:
-        raise credentials_exception
-        
     # Import User model lazily to avoid import-time DB/model dependencies
     from app.models.hazard import User
 
+    email = None
+    role = "citizen"
+    full_name = "User"
+
+    # 1. Handle demo guest tokens only in debug mode.
+    if settings.DEBUG and token in ("mock-guest-token-authority", "mock-guest-token"):
+        email = "president@roadguardian.gov.in"
+        role = "authority"
+        full_name = "Hon'ble Head of State"
+    elif settings.DEBUG and token == "mock-guest-token-citizen":
+        email = "citizen@roadguardian.gov.in"
+        role = "citizen"
+        full_name = "Strategic Citizen Observer"
+    else:
+        # 2. Try standard local JWT decoding
+        payload = decode_access_token(token)
+        if payload is not None:
+            email = payload.get("sub")
+        
+        # 3. Fallback to Supabase JWT verification if standard decoding failed
+        if email is None and supabase_client is not None:
+            try:
+                user_resp = supabase_client.auth.get_user(token)
+                if user_resp and user_resp.user:
+                    email = user_resp.user.email
+                    full_name = user_resp.user.user_metadata.get("full_name", "Citizen")
+            except Exception:
+                # Token is invalid or expired
+                raise credentials_exception
+
+    if email is None:
+        raise credentials_exception
+
+    # 4. Fetch or auto-provision the user locally
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalar_one_or_none()
     
     if user is None:
-        raise credentials_exception
+        # Check email criteria to auto-assign authority role for government domain addresses
+        if any(keyword in email.lower() for keyword in ["president", "authority", "officer", ".gov", "roadguardian.gov.in"]):
+            role = "authority"
+            
+        user = User(
+            email=email,
+            full_name=full_name,
+            role=role,
+            hashed_password=get_password_hash("supa-oauth-bypass-pwd"),
+            points=9999 if email == "president@roadguardian.gov.in" else 0
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
         
     return user

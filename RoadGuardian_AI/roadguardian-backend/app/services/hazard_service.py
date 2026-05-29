@@ -10,7 +10,7 @@ Last Updated: 2026-05-27
 
 import math
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 from typing import Any, Dict, List, Optional
 from sqlalchemy import select, func, and_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -357,7 +357,7 @@ class HazardService:
         type_data = [{"name": ht.title().replace("_", " "), "value": count} for ht, count in type_data_raw]
         
         # Aggregate hazard counts over the last 7 days for time_data
-        today = datetime.utcnow().date()
+        today = datetime.now(timezone.utc).date()
         days = {}
         for i in range(6, -1, -1):
             d = today - timedelta(days=i)
