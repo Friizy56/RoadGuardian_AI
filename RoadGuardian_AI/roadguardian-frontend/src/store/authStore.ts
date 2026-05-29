@@ -10,6 +10,7 @@ interface AuthState {
   initializeAuth: () => void;
   logout: () => Promise<void>;
   updateUser: (data: Partial<User>) => void;
+  guestLogin: (role: 'citizen' | 'authority') => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -18,6 +19,22 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   isInitialized: false,
   
+  guestLogin: (role: 'citizen' | 'authority') => {
+    set({
+      token: "mock-guest-token",
+      isAuthenticated: true,
+      user: {
+        id: "mock-guest-id",
+        email: role === 'authority' ? 'president@roadguardian.gov.in' : 'citizen@roadguardian.gov.in',
+        fullName: role === 'authority' ? 'Hon\'ble Head of State' : 'Strategic Citizen Observer',
+        role: role,
+        points: 9999,
+        badges: [],
+      },
+      isInitialized: true
+    });
+  },
+
   initializeAuth: () => {
     // Initial session check
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -69,7 +86,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.warn("Supabase signout failed, clearing store state directly", e);
+    }
     set({ user: null, token: null, isAuthenticated: false });
   },
 
@@ -89,3 +110,4 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   }
 }));
+

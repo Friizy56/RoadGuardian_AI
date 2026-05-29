@@ -10,6 +10,43 @@ export const Landing = () => {
   const [scanDegree, setScanDegree] = useState(0);
   const [expandedService, setExpandedService] = useState<number | null>(null);
 
+  // Multilingual Voice AI simulation states
+  const [voiceState, setVoiceState] = useState<'idle' | 'listening' | 'transcribing' | 'completed'>('idle');
+  const [voiceLang, setVoiceLang] = useState<'Hindi' | 'Spanish' | 'German'>('Hindi');
+  const [transcriptText, setTranscriptText] = useState('');
+  const [translatedText, setTranslatedText] = useState('');
+
+  const triggerVoiceDemo = () => {
+    setVoiceState('listening');
+    setTranscriptText('Listening to microphone input...');
+    setTranslatedText('');
+    
+    // Simulate listening phase
+    setTimeout(() => {
+      setVoiceState('transcribing');
+      if (voiceLang === 'Hindi') {
+        setTranscriptText('सड़क के बीच में एक बहुत बड़ा गड्ढा है जिससे गाड़ियाँ टकरा रही हैं।');
+      } else if (voiceLang === 'Spanish') {
+        setTranscriptText('Hay un gran bache en medio de la carretera que está dañando los coches.');
+      } else {
+        setTranscriptText('Es gibt ein großes Schlagloch mitten auf der Straße, das Autos beschädigt.');
+      }
+      
+      // Simulate translation/structuring phase
+      setTimeout(() => {
+        setVoiceState('completed');
+        if (voiceLang === 'Hindi') {
+          setTranslatedText('Severe pothole detected in the center of the lane. Categorized as critical high severity.');
+        } else if (voiceLang === 'Spanish') {
+          setTranslatedText('Major pothole reported in the middle of the road segment. Categorized as high severity.');
+        } else {
+          setTranslatedText('Large pothole detected on the central highway segment. Categorized as critical.');
+        }
+      }, 2000);
+    }, 2000);
+  };
+
+
   useEffect(() => {
     const interval = setInterval(() => {
       setActiveDots(prev => prev.map(() => Math.random() > 0.5));
@@ -48,10 +85,42 @@ export const Landing = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen text-foreground pt-4 relative">
-      
+    <div className="flex flex-col min-h-screen text-foreground pt-0 relative overflow-x-hidden">
+      <style>{`
+        @keyframes marquee {
+          0% { transform: translateX(100%); }
+          100% { transform: translateX(-100%); }
+        }
+        .animate-marquee {
+          animation: marquee 28s linear infinite;
+        }
+        @keyframes wave {
+          0%, 100% { transform: scaleY(0.3); }
+          50% { transform: scaleY(1); }
+        }
+        .animate-wave-bar {
+          animation: wave 1.2s ease-in-out infinite;
+          transform-origin: bottom;
+        }
+      `}</style>
+
+      {/* Live National Ticker */}
+      <div className="bg-[#000080] dark:bg-slate-900 border-b border-[#FF9933] py-2 overflow-hidden relative z-50 shadow-md">
+        <div className="flex items-center gap-4 whitespace-nowrap animate-marquee text-[10px] sm:text-xs font-mono uppercase text-white font-bold">
+          <span className="text-[#FF9933] flex items-center gap-1 shrink-0 px-3 bg-black/40 py-0.5 rounded border border-[#FF9933]/30 font-bold"><Zap className="w-3.5 h-3.5" /> LIVE FEEDS:</span>
+          <span className="mx-2">🌟 Citizen Bobby resolved crack #4029 in Washington D.C. (+50 Civic Points awarded!)</span>
+          <span className="text-[#FF9933]">|</span>
+          <span className="mx-2">🌿 Eco-Asphalt deployed on Highway-95 — 4.8 Metric Tons of CO2 Offset!</span>
+          <span className="text-[#FF9933]">|</span>
+          <span className="mx-2">🧠 ML hot-spot algorithm updated: 94.8% accuracy achieved on preemptive pavement erosion</span>
+          <span className="text-[#FF9933]">|</span>
+          <span className="mx-2">📡 Active Satellite Node orbiting Washington sector - live telemetry active</span>
+        </div>
+      </div>
+
       {/* Subtle Background Pattern */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.03] dark:opacity-10" style={{ backgroundImage: 'radial-gradient(currentColor 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
+
       <div className="absolute top-0 left-0 right-0 h-[500px] bg-gradient-to-b from-[#000080]/5 dark:from-primary/10 to-transparent pointer-events-none z-0"></div>
 
       {/* IRCTC-Style Dense Hero Section */}
@@ -188,10 +257,151 @@ export const Landing = () => {
                    NODE: IND-204-VX
                  </div>
               </motion.div>
-            </div>
-          </div>
-          
-          {/* Right Column: IRCTC-Style Dense Panels */}
+             </div>
+
+             {/* Dynamic AI Voice Command & Translation Simulation Panel */}
+             <div className="bg-white/90 dark:bg-card/85 backdrop-blur-md border border-border shadow-lg p-5 rounded-sm mt-6">
+               <div className="flex items-center justify-between border-b border-border pb-3 mb-5">
+                 <h3 className="font-bold text-sm uppercase flex items-center text-[#000080] dark:text-primary tracking-wider">
+                   🎙️ AI Multilingual Voice Command & NLP Translation
+                 </h3>
+                 <span className="text-[9px] bg-[#FF9933]/15 text-[#FF9933] border border-[#FF9933]/30 px-2 py-0.5 rounded-full font-bold uppercase tracking-widest">
+                   Whisper & Gemini AI
+                 </span>
+               </div>
+
+               <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+                 {/* Voice control button & wave bars */}
+                 <div className="md:col-span-4 flex flex-col items-center justify-center bg-slate-900/10 dark:bg-black/30 p-4 rounded border border-border">
+                   <span className="text-[10px] uppercase font-bold text-slate-500 mb-2">Select Language</span>
+                   <select 
+                     value={voiceLang} 
+                     onChange={(e) => setVoiceLang(e.target.value as any)}
+                     disabled={voiceState === 'listening' || voiceState === 'transcribing'}
+                     className="bg-background border border-border focus:border-primary text-xs font-bold px-3 py-1.5 rounded-sm mb-4 w-full focus:ring-1 focus:ring-primary text-foreground"
+                   >
+                     <option value="Hindi">Hindi (हिंदी)</option>
+                     <option value="Spanish">Spanish (Español)</option>
+                     <option value="German">German (Deutsch)</option>
+                   </select>
+
+                   {/* Mic button */}
+                   <button
+                     onClick={triggerVoiceDemo}
+                     disabled={voiceState === 'listening' || voiceState === 'transcribing'}
+                     className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg border transition-all duration-300 relative ${
+                       voiceState === 'listening' 
+                         ? 'bg-red-500 border-red-400 text-white animate-pulse scale-105' 
+                         : voiceState === 'transcribing'
+                         ? 'bg-yellow-500 border-yellow-400 text-white animate-pulse'
+                         : 'bg-[#000080] hover:bg-[#000080]/90 text-white border-[#FF9933]'
+                     }`}
+                   >
+                     <PhoneCall className={`w-6 h-6 ${voiceState === 'listening' ? 'animate-bounce' : ''}`} />
+                     {voiceState === 'listening' && (
+                       <span className="absolute inset-0 rounded-full border-2 border-red-500 animate-ping opacity-75"></span>
+                     )}
+                   </button>
+                   
+                   <span className="text-[9px] uppercase font-bold mt-3 text-muted-foreground">
+                     {voiceState === 'listening' 
+                       ? '🔴 Recording Speech...' 
+                       : voiceState === 'transcribing'
+                       ? '🔄 Whisper AI transcribing...' 
+                       : 'Click to Speak'}
+                   </span>
+
+                   {/* Equalizer Frequency bars */}
+                   <div className="flex items-end justify-center gap-1 h-10 mt-4">
+                     {[1, 2, 3, 4, 5, 6, 7].map((bar) => (
+                       <div 
+                         key={bar} 
+                         style={{ 
+                           animationDelay: `${bar * 0.15}s`,
+                           height: voiceState === 'listening' ? '30px' : '4px'
+                         }}
+                         className={`w-1.5 bg-[#FF9933] rounded-t-sm transition-all duration-300 ${
+                           voiceState === 'listening' ? 'animate-wave-bar' : ''
+                         }`}
+                       ></div>
+                     ))}
+                   </div>
+                 </div>
+
+                 {/* Console Logs / Audio Transcript Terminal */}
+                 <div className="md:col-span-8 space-y-3 font-mono">
+                   <div className="bg-[#040D1A] text-slate-300 p-4 rounded-sm border border-border/80 text-[11px] leading-relaxed relative min-h-[170px] flex flex-col justify-between">
+                     <div>
+                       <span className="text-teal-400 font-bold flex items-center gap-1.5 text-2xs uppercase tracking-widest border-b border-[#000080] pb-1.5 mb-2">
+                         <Server className="w-3.5 h-3.5" /> AI Real-Time Processing Console
+                       </span>
+                       
+                       <p className="text-slate-400 mt-1">
+                         <span className="text-teal-400 font-black">&gt;</span> SYSTEM STATE: <span className="font-extrabold text-foreground">{voiceState.toUpperCase()}</span>
+                       </p>
+
+                       {transcriptText && (
+                         <div className="mt-3">
+                           <span className="text-[#FF9933] font-bold uppercase text-[9px] block">Transcribed Native Text:</span>
+                           <p className="text-white text-xs mt-1 font-sans">{transcriptText}</p>
+                         </div>
+                       )}
+
+                       {translatedText && (
+                         <div className="mt-3 animate-fadeIn">
+                           <span className="text-emerald-400 font-bold uppercase text-[9px] block">Gemini NLP Translated Output (English):</span>
+                           <p className="text-white text-xs mt-1 font-sans font-medium bg-emerald-950/20 p-2 rounded border border-emerald-500/20">{translatedText}</p>
+                         </div>
+                       )}
+                     </div>
+
+                     <div className="text-[9px] opacity-45 uppercase text-right tracking-widest mt-4">
+                       CONFIDENCE LEVEL: {voiceState === 'completed' ? '98.4%' : 'N/A'}
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </div>
+
+             {/* Proactive Satellite AI Sweep Panel */}
+             <div className="bg-white/90 dark:bg-card/85 backdrop-blur-md border border-border shadow-lg p-5 rounded-sm mt-6">
+               <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+                 <h3 className="font-bold text-sm uppercase flex items-center text-[#000080] dark:text-primary tracking-wider">
+                   🛰️ Proactive Orbit Satellite AI Sweep
+                 </h3>
+                 <span className="text-[9px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 px-2.5 py-0.5 rounded-full font-bold uppercase tracking-widest">
+                   Live Sentinel Nodes
+                 </span>
+               </div>
+               
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                 <div className="bg-slate-900/10 dark:bg-black/30 p-3 rounded border border-border text-xs space-y-2">
+                   <span className="text-2xs font-bold uppercase text-slate-500 tracking-wide">Scanning Region</span>
+                   <div className="flex justify-between items-center bg-background/50 p-2 rounded border border-border/40">
+                     <span className="font-bold">Interstate Corridor 95</span>
+                     <span className="text-[10px] font-mono text-cyan-400">40.7128° N, 74.0060° W</span>
+                   </div>
+                   <div className="flex justify-between items-center bg-background/50 p-2 rounded border border-border/40">
+                     <span className="font-bold">National Highway 4</span>
+                     <span className="text-[10px] font-mono text-emerald-400">13.0827° N, 80.2707° E</span>
+                   </div>
+                 </div>
+
+                 <div className="bg-slate-900/10 dark:bg-black/30 p-3 rounded border border-border text-xs space-y-2 flex flex-col justify-between">
+                   <div>
+                     <span className="text-2xs font-bold uppercase text-slate-500 tracking-wide">Orbital Telemetry Sweep Status</span>
+                     <div className="flex items-center gap-2 mt-2">
+                       <span className="w-2.5 h-2.5 bg-emerald-400 rounded-full animate-ping"></span>
+                       <span className="font-bold text-foreground">AI Scanning active: 94% complete</span>
+                     </div>
+                   </div>
+                   <p className="text-[10px] text-muted-foreground">Preemptive wear-and-tear models are synced to municipal repair pipelines automatically.</p>
+                 </div>
+               </div>
+             </div>
+           </div>
+           
+           {/* Right Column: IRCTC-Style Dense Panels */}
           <div className="lg:col-span-4 flex flex-col gap-4 relative z-10">
             
             {/* Login Pane */}

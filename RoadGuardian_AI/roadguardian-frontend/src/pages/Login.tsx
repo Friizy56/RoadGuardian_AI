@@ -10,9 +10,11 @@ import toast from 'react-hot-toast';
 
 export const Login = () => {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated);
+  const guestLogin = useAuthStore(state => state.guestLogin);
   const [loading, setLoading] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const role = searchParams.get('role') || 'citizen';
+
 
   useEffect(() => {
     // Save intended role so authStore can apply it after OAuth redirect
@@ -176,6 +178,15 @@ export const Login = () => {
                 <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 mr-3 relative z-10" />
                 <span className="relative z-10">Sign In via Google</span>
               </Button>
+
+              <Button 
+                onClick={() => guestLogin(role as 'citizen' | 'authority')} 
+                disabled={loading}
+                className="w-full h-14 text-base font-extrabold bg-gradient-to-r from-amber-500 via-yellow-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white shadow-lg border border-amber-400 hover:border-yellow-300 transition-all rounded-sm uppercase tracking-wider relative overflow-hidden animate-pulse flex items-center justify-center gap-2"
+              >
+                👑 Presidential Guest Bypass
+              </Button>
+
               
               <div className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-sm">
                 <p className="text-[10px] sm:text-xs text-center text-slate-500 dark:text-slate-400 font-mono leading-relaxed uppercase tracking-wider">

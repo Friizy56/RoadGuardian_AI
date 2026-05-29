@@ -10,22 +10,34 @@ export default defineConfig(({ command }) => ({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      manifestFilename: 'manifest.json',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'RoadGuardian AI',
+        name: 'RoadGuardian AI - Road Safety Platform',
         short_name: 'RoadGuardian',
         description: 'AI-powered road safety platform',
         theme_color: '#000000',
         background_color: '#000000',
         display: 'standalone',
+        start_url: '/static/index.html',
         icons: [
           {
-            src: 'pwa-192x192.png',
+            src: 'icons/icon-72.png',
+            sizes: '72x72',
+            type: 'image/png'
+          },
+          {
+            src: 'icons/report.png',
+            sizes: '96x96',
+            type: 'image/png'
+          },
+          {
+            src: 'icons/icon-192.png',
             sizes: '192x192',
             type: 'image/png'
           },
           {
-            src: 'pwa-512x512.png',
+            src: 'icons/icon-512.png',
             sizes: '512x512',
             type: 'image/png'
           }

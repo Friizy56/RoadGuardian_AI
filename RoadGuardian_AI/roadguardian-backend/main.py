@@ -126,20 +126,6 @@ async def root():
     return RedirectResponse(url="/static/index.html")
 
 
-# SPA fallback: serve index.html for any other GET path so client-side routing works
-from fastapi.responses import FileResponse
-from pathlib import Path
-_STATIC_INDEX = str(Path(__file__).resolve().parent / "static" / "index.html")
-
-
-@app.get("/{full_path:path}")
-async def spa_fallback(full_path: str):
-    # If path starts with api or static or docs, let other routes handle it
-    first_seg = full_path.split('/', 1)[0] if full_path else ''
-    if first_seg in ("static", "auth", "api", "docs"):
-        raise HTTPException(status_code=404)
-    return FileResponse(_STATIC_INDEX)
-
 
 @app.get("/authority")
 async def authority_page():
@@ -180,6 +166,22 @@ async def health_db():
     except Exception as exc:
         logger.error(f"❌ /health/db check failed: {exc}")
         return JSONResponse(status_code=500, content={"status": "error", "detail": str(exc)})
+
+
+# SPA fallback: serve index.html for any other GET path so client-side routing works
+from fastapi.responses import FileResponse
+from pathlib import Path
+_STATIC_INDEX = str(Path(__file__).resolve().parent / "static" / "index.html")
+
+
+@app.get("/{full_path:path}")
+async def spa_fallback(full_path: str):
+    # If path starts with api or static or docs, let other routes handle it
+    first_seg = full_path.split('/', 1)[0] if full_path else ''
+    if first_seg in ("static", "auth", "api", "docs"):
+        raise HTTPException(status_code=404)
+    return FileResponse(_STATIC_INDEX)
+
 
 
 if __name__ == "__main__":

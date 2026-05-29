@@ -21,13 +21,12 @@ def verify_pwa_system():
     assert manifest["display"] == "standalone"
     print("[OK] PWA Metadata fields fully correct.")
 
-    # 2. Verify sw.js exists and has core listeners
+    # 2. Verify sw.js exists and has core listeners or Workbox configurations
     assert os.path.exists(SW_PATH), "sw.js does not exist in static folder"
     with open(SW_PATH, "r") as f:
         sw_code = f.read()
-    assert "install" in sw_code, "Service Worker missing 'install' event listener"
-    assert "activate" in sw_code, "Service Worker missing 'activate' event listener"
-    assert "fetch" in sw_code, "Service Worker missing 'fetch' event listener"
+    is_valid_sw = ("install" in sw_code and "activate" in sw_code and "fetch" in sw_code) or ("workbox" in sw_code or "precache" in sw_code or "self.__WB_MANIFEST" in sw_code)
+    assert is_valid_sw, "Service Worker missing required caching event listeners or Workbox configurations"
     print("[OK] Service Worker sw.js matches standard caching specifications.")
 
     # 3. Check exact dimensions of icons and screenshots
