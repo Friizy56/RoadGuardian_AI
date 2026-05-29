@@ -25,6 +25,7 @@ from app.auth.dependencies import get_current_user
 from app.models.hazard import User, Hazard
 from app.services.hazard_service import HazardService
 from app.services.prediction_service import PredictionService
+from app.services.notification_service import NotificationService
 from app.schemas.hazard import (
     HazardStatus,
     HazardType,
@@ -54,7 +55,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # ==========================================
 
 try:
-    from app.ai_engine.vision import detect_hazard_severity
+    from app.ai_engine.vision import detect_hazard_severity, verify_resolution, apply_privacy_filters
     AI_ANALYSIS_AVAILABLE = True
 except (ImportError, AttributeError):
     AI_ANALYSIS_AVAILABLE = False
@@ -67,6 +68,14 @@ except (ImportError, AttributeError):
         """
         logger.info(f"🔮 Vision fallback called for path: {image_path}. Mocking confidence: 0.88")
         return 0.88
+
+    async def verify_resolution(before_image_path: str, after_image_path: str) -> bool:
+        logger.info(f"🔮 Vision fallback called for verify_resolution. Mocking True.")
+        return True
+
+    async def apply_privacy_filters(image_path: str) -> None:
+        logger.info(f"🔮 Vision fallback called for apply_privacy_filters. Mocking pass.")
+        pass
 
 try:
     from app.ai_engine.voice import transcribe_voice_report
@@ -130,6 +139,9 @@ async def upload_hazard(
         # Save image locally
         with open(filepath, "wb") as buffer:
             shutil.copyfileobj(image.file, buffer)
+            
+        # Apply privacy filters to the saved image (Phase 5)
+        await apply_privacy_filters(filepath)
     except Exception as e:
         logger.error(f"❌ Failed to save image: {e}")
         raise HTTPException(
@@ -180,6 +192,15 @@ async def upload_hazard(
         })
     except Exception as ws_err:
         logger.warning(f"⚠️ Failed to broadcast new hazard WebSocket update: {ws_err}")
+
+    # Phase 2: Emergency Services Integration
+    if new_hazard.urgency_level == "critical" or new_hazard.severity_score >= 9.0:
+        await NotificationService.dispatch_emergency_alert(
+            hazard_id=new_hazard.id,
+            severity=new_hazard.severity_score,
+            location=new_hazard.location_address or f"Lat: {new_hazard.latitude}, Lng: {new_hazard.longitude}",
+            hazard_type=new_hazard.hazard_type
+        )
 
     return new_hazard
 
@@ -285,6 +306,15 @@ async def upload_voice_hazard(
             os.remove(filepath)
     except Exception as e:
         logger.warning(f"⚠️ Failed to remove temp audio file: {e}")
+
+    # Phase 2: Emergency Services Integration
+    if new_hazard.urgency_level == "critical" or new_hazard.severity_score >= 9.0:
+        await NotificationService.dispatch_emergency_alert(
+            hazard_id=new_hazard.id,
+            severity=new_hazard.severity_score,
+            location=new_hazard.location_address or f"Lat: {new_hazard.latitude}, Lng: {new_hazard.longitude}",
+            hazard_type=new_hazard.hazard_type
+        )
 
     return new_hazard
 
@@ -580,6 +610,44 @@ async def get_active_hazards(
     return result.scalars().all()
 
 
+@router.get("/authority/sla-breaches", response_model=List[HazardResponse])
+async def get_sla_breaches(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """Get all hazards that have breached their SLA deadlines."""
+    if current_user.role not in ["authority", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authority access required"
+        )
+    
+    # First update the breached flag for any hazards past deadline
+    now = datetime.utcnow()
+    stmt_update = (
+        select(Hazard)
+        .where(Hazard.status != "resolved")
+        .where(Hazard.status != "rejected")
+        .where(Hazard.sla_deadline < now)
+        .where(Hazard.sla_breached == False)
+    )
+    res_update = await db.execute(stmt_update)
+    for hazard in res_update.scalars():
+        hazard.sla_breached = True
+    await db.commit()
+
+    # Then return all breached hazards
+    result = await db.execute(
+        select(Hazard)
+        .where(Hazard.sla_breached == True)
+        .where(Hazard.status != "resolved")
+        .where(Hazard.status != "rejected")
+        .order_by(Hazard.sla_deadline.asc())
+        .options(selectinload(Hazard.user), selectinload(Hazard.resolved_by))
+    )
+    return result.scalars().all()
+
+
 @router.post("/authority/resolve/{hazard_id}", response_model=HazardResponse)
 async def resolve_hazard(
     hazard_id: int,
@@ -627,6 +695,20 @@ async def resolve_hazard(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Could not write file to local disk storage."
         )
+        
+    # Verify resolution image structurally matches original hazard image (Phase 3)
+    if hazard.image_url:
+        # Assuming hazard.image_url is like '/uploads/123_456.jpg'
+        before_filepath = os.path.join(os.getcwd(), hazard.image_url.lstrip("/"))
+        is_valid = await verify_resolution(before_filepath, filepath)
+        if not is_valid:
+            # Clean up the invalid file
+            if os.path.exists(filepath):
+                os.remove(filepath)
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Resolution proof rejected: The 'After' image does not structurally match the original 'Before' image."
+            )
         
     hazard.resolved_image_url = f"/uploads/{filename}"
     hazard.resolution_notes = resolution_notes

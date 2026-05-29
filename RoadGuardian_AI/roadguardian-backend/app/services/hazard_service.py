@@ -203,6 +203,15 @@ class HazardService:
         # Resolve address description from coordinates
         location_address = reverse_geocode(latitude, longitude)
         
+        # Determine SLA deadline based on severity score
+        now = datetime.utcnow()
+        if severity_data["severity_score"] >= 8.0:
+            sla_deadline = now + timedelta(hours=48)
+        elif severity_data["severity_score"] >= 5.0:
+            sla_deadline = now + timedelta(days=7)
+        else:
+            sla_deadline = now + timedelta(days=14)
+
         # Create ORM instance
         new_hazard = Hazard(
             user_id=user_id,
@@ -215,7 +224,9 @@ class HazardService:
             status="pending",
             image_url=image_url,
             description=description,
-            location_address=location_address
+            location_address=location_address,
+            sla_deadline=sla_deadline,
+            sla_breached=False
         )
         
         db.add(new_hazard)

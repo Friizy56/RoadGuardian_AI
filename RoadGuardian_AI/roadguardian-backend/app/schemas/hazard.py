@@ -101,6 +101,8 @@ class HazardResponse(BaseModel):
     resolved_by_name: Optional[str] = Field(None, description="Name of the authority who resolved the report")
     reporter_name: Optional[str] = Field(None, description="Full name or credential of the reporting user")
     ai_analysis_available: bool = Field(True, description="Whether AI analysis was available for this report")
+    sla_deadline: Optional[datetime] = Field(None, description="The deadline for resolving the hazard before breaching SLA")
+    sla_breached: bool = Field(False, description="Whether the SLA has been breached")
 
     @model_validator(mode="before")
     @classmethod
@@ -198,6 +200,7 @@ class HotspotPrediction(BaseModel):
     peak_time_hour: int = Field(..., description="Forecasted daily peak occurrence hour of day (0 to 23)")
     avg_severity: float = Field(..., description="Forecasted average severity of issues in the zone")
     common_type: HazardType = Field(..., description="Most common hazard classification inside this zone")
+    recommended_budget_allocation_inr: float = Field(..., description="Estimated budgetary requirement for completely rebuilding the hotspot zone")
 
 
 class HotspotsResponse(BaseModel):

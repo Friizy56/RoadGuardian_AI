@@ -54,7 +54,8 @@ async def transcribe_voice_report(audio_path: str) -> str:
         model = get_whisper_model()
         
         # Run transcription synchronously (Whisper executes locally)
-        result = model.transcribe(audio_path)
+        # Instruct the model to translate regional languages into English
+        result = model.transcribe(audio_path, task="translate")
         
         transcript = result.get("text", "").strip()
         if transcript:

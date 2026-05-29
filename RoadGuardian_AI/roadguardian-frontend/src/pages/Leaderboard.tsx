@@ -6,18 +6,19 @@ import { api } from '@/services/api';
 
 export const Leaderboard = () => {
   const [leaderboard, setLeaderboard] = React.useState<any[]>([]);
+  const [period, setPeriod] = React.useState('all_time');
 
   React.useEffect(() => {
     const fetchLeaderboard = async () => {
       try {
-        const response = await api.get('/auth/leaderboard');
+        const response = await api.get(`/auth/leaderboard?period=${period}`);
         setLeaderboard(response.data);
       } catch (error) {
         console.error("Failed to fetch leaderboard", error);
       }
     };
     fetchLeaderboard();
-  }, []);
+  }, [period]);
   return (
     <div className="max-w-5xl mx-auto space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 border-b-2 border-[#138808] pb-4">
@@ -26,8 +27,18 @@ export const Leaderboard = () => {
           <p className="text-muted-foreground font-bold text-xs uppercase tracking-wider mt-1">Public ranking of verified infrastructure reporters.</p>
         </div>
         <div className="flex gap-2 bg-slate-50 dark:bg-muted p-1 border border-border">
-          <button className="px-4 py-1.5 text-[10px] font-black uppercase tracking-widest bg-white dark:bg-card shadow-sm border border-border text-[#000080] dark:text-primary">All Time</button>
-          <button className="px-4 py-1.5 text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:text-foreground">This Month</button>
+          <button 
+            onClick={() => setPeriod('all_time')}
+            className={`px-4 py-1.5 text-[10px] uppercase tracking-widest ${period === 'all_time' ? 'font-black bg-white dark:bg-card shadow-sm border border-border text-[#000080] dark:text-primary' : 'font-bold text-muted-foreground hover:text-foreground'}`}
+          >
+            All Time
+          </button>
+          <button 
+            onClick={() => setPeriod('this_month')}
+            className={`px-4 py-1.5 text-[10px] uppercase tracking-widest ${period === 'this_month' ? 'font-black bg-white dark:bg-card shadow-sm border border-border text-[#000080] dark:text-primary' : 'font-bold text-muted-foreground hover:text-foreground'}`}
+          >
+            This Month
+          </button>
         </div>
       </div>
 

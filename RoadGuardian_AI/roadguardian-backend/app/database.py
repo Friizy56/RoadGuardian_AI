@@ -41,8 +41,10 @@ async_url = get_async_db_url(settings.DATABASE_URL)
 if not async_url:
     raise ValueError("DATABASE_URL is empty")
 
-engine_connect_args = {"statement_cache_size": 0}
-engine_connect_args["prepared_statement_name_func"] = lambda: f"__asyncpg_{uuid4()}__"
+engine_connect_args = {}
+if "postgresql+asyncpg" in async_url:
+    engine_connect_args["statement_cache_size"] = 0
+    engine_connect_args["prepared_statement_name_func"] = lambda: f"__asyncpg_{uuid4()}__"
 
 engine = create_async_engine(
     async_url,

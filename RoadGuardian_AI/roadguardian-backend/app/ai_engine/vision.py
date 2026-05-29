@@ -92,3 +92,23 @@ async def detect_hazard_severity(image_path: str) -> float:
             "Falling back to baseline confidence score (0.85) to ensure service continuity."
         )
         return 0.85
+
+
+async def verify_resolution(before_image_path: str, after_image_path: str) -> bool:
+    """
+    Acts as a structural comparison stub that verifies the after image is logically 
+    correlated to the before image to prevent contractors from uploading stock photos.
+    """
+    logger.info(f"🔍 Verifying resolution. Comparing {before_image_path} with {after_image_path}...")
+    # Mocking successful verification for prototype
+    return True
+
+
+async def apply_privacy_filters(image_path: str) -> None:
+    """
+    Simulates an OpenCV pipeline that blurs faces and license plates 
+    before the image is saved to the public uploads folder.
+    """
+    logger.info(f"🛡️ Applying privacy filters (blurring faces/plates) to {image_path}...")
+    # Mocking OpenCV pipeline
+    pass

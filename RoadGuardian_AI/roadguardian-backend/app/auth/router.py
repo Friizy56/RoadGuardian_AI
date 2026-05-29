@@ -109,13 +109,40 @@ async def sync_user(
     return current_user
 
 @router.get("/leaderboard", response_model=List[UserResponse])
-async def get_leaderboard(db: AsyncSession = Depends(get_db)):
+async def get_leaderboard(period: str = "all_time", db: AsyncSession = Depends(get_db)):
     """Get top 100 users sorted by points for the leaderboard"""
-    from app.models.hazard import User
+    from app.models.hazard import User, GamificationBadge
+    from sqlalchemy import select, func
+    import datetime
     
-    result = await db.execute(
-        select(User)
-        .order_by(User.points.desc())
-        .limit(100)
-    )
-    return result.scalars().all()
+    if period == "this_month":
+        now = datetime.datetime.now()
+        start_of_month = datetime.datetime(now.year, now.month, 1)
+        
+        result = await db.execute(
+            select(User, func.sum(GamificationBadge.points_awarded).label("month_points"))
+            .join(GamificationBadge, User.id == GamificationBadge.user_id)
+            .where(GamificationBadge.awarded_at >= start_of_month)
+            .group_by(User.id)
+            .order_by(func.sum(GamificationBadge.points_awarded).desc())
+            .limit(100)
+        )
+        
+        users = []
+        for row in result.all():
+            u = row.User
+            users.append({
+                "id": u.id,
+                "email": u.email,
+                "full_name": u.full_name,
+                "points": row.month_points,
+                "role": u.role
+            })
+        return users
+    else:
+        result = await db.execute(
+            select(User)
+            .order_by(User.points.desc())
+            .limit(100)
+        )
+        return result.scalars().all()

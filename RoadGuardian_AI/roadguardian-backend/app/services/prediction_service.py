@@ -74,7 +74,8 @@ class PredictionService:
                     "expected_hazards_per_week": round(float(recent_count), 1),
                     "peak_time_hour": peak_hour,
                     "avg_severity": round(float(avg_severity), 1),
-                    "common_type": Counter([h.hazard_type for h in hazards_in_grid]).most_common(1)[0][0]
+                    "common_type": Counter([h.hazard_type for h in hazards_in_grid]).most_common(1)[0][0],
+                    "recommended_budget_allocation_inr": round(float(avg_severity * len(hazards_in_grid) * 10000), 2)
                 })
         
         confidence = min(0.95, len(predicted) / 10.0)
