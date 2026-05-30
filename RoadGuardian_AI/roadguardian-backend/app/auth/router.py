@@ -31,12 +31,15 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
 
+from app.schemas.hazard import BadgeResponse
+
 class UserResponse(BaseModel):
-    id: int
+    id: str
     email: str
     full_name: str | None = None
     points: int = 0
     role: str = "citizen"
+    badges: List[BadgeResponse] = []
     
     class Config:
         from_attributes = True

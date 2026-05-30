@@ -62,7 +62,7 @@ export const Dashboard = () => {
           </CardHeader>
           <CardContent className="p-6 flex justify-between items-end">
             <div>
-               <div className="text-5xl font-black text-foreground font-mono leading-none">{reports.length}</div>
+               <div className="text-5xl font-black text-foreground font-mono leading-none">{Array.isArray(reports) ? reports.length : 0}</div>
                <p className="text-xs font-bold text-success uppercase mt-2">Active Tracker</p>
             </div>
             <div className="text-xs font-mono font-bold bg-muted px-3 py-1.5 border border-border text-success">ACTIVE</div>
@@ -100,23 +100,23 @@ export const Dashboard = () => {
                  </tr>
                </thead>
                <tbody className="divide-y divide-border">
-                 {reports.slice(0, 5).map(report => (
-                   <tr key={report.id} className="hover:bg-slate-50 dark:hover:bg-muted/30 transition-colors">
-                     <td className="py-4 px-5 font-mono font-bold text-[#000080] dark:text-primary text-[13px]">HZ-{report.id}</td>
-                     <td className="py-4 px-5 font-bold text-foreground uppercase">{report.hazard_type.replace('_', ' ')}</td>
+                 {(Array.isArray(reports) ? reports : []).slice(0, 5).map(report => (
+                   <tr key={report?.id} className="hover:bg-slate-50 dark:hover:bg-muted/30 transition-colors">
+                     <td className="py-4 px-5 font-mono font-bold text-[#000080] dark:text-primary text-[13px]">HZ-{report?.id}</td>
+                     <td className="py-4 px-5 font-bold text-foreground uppercase">{report?.hazard_type?.replace('_', ' ') || 'UNKNOWN'}</td>
                      <td className="py-4 px-5">
-                       <div className="flex items-center text-muted-foreground font-medium"><MapPin className="w-4 h-4 mr-1.5" /> {report.latitude.toFixed(4)}, {report.longitude.toFixed(4)}</div>
-                       <div className="flex items-center text-muted-foreground text-xs mt-1.5"><CalendarClock className="w-3.5 h-3.5 mr-1.5" /> {new Date(report.created_at).toLocaleDateString()}</div>
+                       <div className="flex items-center text-muted-foreground font-medium"><MapPin className="w-4 h-4 mr-1.5" /> {report?.latitude?.toFixed(4) || 'N/A'}, {report?.longitude?.toFixed(4) || 'N/A'}</div>
+                       <div className="flex items-center text-muted-foreground text-xs mt-1.5"><CalendarClock className="w-3.5 h-3.5 mr-1.5" /> {report?.created_at ? new Date(report.created_at).toLocaleDateString() : 'N/A'}</div>
                      </td>
                      <td className="py-4 px-5">
                         <span className={`px-2.5 py-1 rounded-sm font-bold uppercase tracking-wider border text-xs ${
-                          report.status === 'resolved' ? 'bg-success/10 text-success border-success/30' : 
-                          report.status === 'pending' ? 'bg-destructive/10 text-destructive border-destructive/30' : 
+                          report?.status === 'resolved' ? 'bg-success/10 text-success border-success/30' : 
+                          report?.status === 'pending' ? 'bg-destructive/10 text-destructive border-destructive/30' : 
                           'bg-muted text-foreground border-border'
                         }`}>
-                          {report.status}
+                          {report?.status || 'UNKNOWN'}
                         </span>
-                        <div className="font-mono text-xs mt-2.5 font-bold text-muted-foreground">SEV: {report.severity_score}/10</div>
+                        <div className="font-mono text-xs mt-2.5 font-bold text-muted-foreground">SEV: {report?.severity_score ?? 0}/10</div>
                      </td>
                    </tr>
                  ))}

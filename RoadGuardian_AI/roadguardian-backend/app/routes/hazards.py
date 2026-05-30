@@ -37,7 +37,8 @@ from app.schemas.hazard import (
     DashboardAnalyticsResponse,
     SeverityScoreResponse,
     HotspotsResponse,
-    RecurringPatternsResponse
+    RecurringPatternsResponse,
+    RecurringPatternsReportResponse
 )
 
 logger = logging.getLogger(__name__)
@@ -200,14 +201,7 @@ async def upload_hazard(
     except Exception as ws_err:
         logger.warning(f"⚠️ Failed to broadcast new hazard WebSocket update: {ws_err}")
 
-    # Phase 2: Emergency Services Integration
-    if new_hazard.urgency_level == "critical" or new_hazard.severity_score >= 9.0:
-        await NotificationService.dispatch_emergency_alert(
-            hazard_id=new_hazard.id,
-            severity=new_hazard.severity_score,
-            location=new_hazard.location_address or f"Lat: {new_hazard.latitude}, Lng: {new_hazard.longitude}",
-            hazard_type=new_hazard.hazard_type
-        )
+    # Phase 2: Emergency Services Integration (Moved centrally to HazardService)
 
     return new_hazard
 
@@ -314,14 +308,7 @@ async def upload_voice_hazard(
     except Exception as e:
         logger.warning(f"⚠️ Failed to remove temp audio file: {e}")
 
-    # Phase 2: Emergency Services Integration
-    if new_hazard.urgency_level == "critical" or new_hazard.severity_score >= 9.0:
-        await NotificationService.dispatch_emergency_alert(
-            hazard_id=new_hazard.id,
-            severity=new_hazard.severity_score,
-            location=new_hazard.location_address or f"Lat: {new_hazard.latitude}, Lng: {new_hazard.longitude}",
-            hazard_type=new_hazard.hazard_type
-        )
+    # Phase 2: Emergency Services Integration (Moved centrally to HazardService)
 
     return new_hazard
 
@@ -682,19 +669,8 @@ async def get_sla_breaches(
             detail="Authority access required"
         )
     
-    # First update the breached flag for any hazards past deadline
-    now = datetime.utcnow()
-    stmt_update = (
-        select(Hazard)
-        .where(Hazard.status != "resolved")
-        .where(Hazard.status != "rejected")
-        .where(Hazard.sla_deadline < now)
-        .where(Hazard.sla_breached == False)
-    )
-    res_update = await db.execute(stmt_update)
-    for hazard in res_update.scalars():
-        hazard.sla_breached = True
-    await db.commit()
+    # First update and evaluate SLA statuses centrally using HazardService
+    await HazardService.evaluate_sla_status(db)
 
     # Then return all breached hazards
     result = await db.execute(
@@ -849,6 +825,26 @@ async def get_predicted_hotspots(
     return result
 
 
+@router.get("/predict-hotspots", response_model=HotspotsResponse)
+async def get_predict_hotspots_alias(
+    days_lookback: int = 30,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Alias for predictions/hotspots to support predict-hotspots path.
+    Restricted to authority/admin roles.
+    """
+    if current_user.role not in ["authority", "admin"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Authority access required"
+        )
+    
+    result = await PredictionService.predict_hotspots(db, days_lookback)
+    return result
+
+
 @router.get("/predictions/recurring", response_model=RecurringPatternsResponse)
 async def get_recurring_patterns(
     db: AsyncSession = Depends(get_db),
@@ -865,4 +861,15 @@ async def get_recurring_patterns(
         )
     
     result = await PredictionService.get_recurring_patterns(db)
+    return result
+
+
+@router.get("/recurring-patterns", response_model=RecurringPatternsReportResponse)
+async def get_recurring_patterns_report_endpoint(
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Exposes recurring hazard patterns grouped by location and type.
+    """
+    result = await PredictionService.get_recurring_patterns_report(db)
     return result

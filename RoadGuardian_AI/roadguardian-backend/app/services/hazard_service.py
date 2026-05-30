@@ -257,7 +257,7 @@ class HazardService:
         # Determine SLA deadline based on severity score
         now = datetime.utcnow()
         if severity_data["severity_score"] >= 8.0:
-            sla_deadline = now + timedelta(hours=48)
+            sla_deadline = now + timedelta(hours=24)
         elif severity_data["severity_score"] >= 5.0:
             sla_deadline = now + timedelta(days=7)
         else:
@@ -303,7 +303,50 @@ class HazardService:
         db.add(new_hazard)
         await db.commit()
         await db.refresh(new_hazard)
+
+        # Emergency Services Dispatch Integration for Critical Severity (9.0+)
+        if new_hazard.urgency_level == "critical" or new_hazard.severity_score >= 9.0:
+            try:
+                from app.services.notification_service import NotificationService
+                await NotificationService.dispatch_emergency_alert(
+                    hazard_id=new_hazard.id,
+                    severity=new_hazard.severity_score,
+                    location=new_hazard.location_address or f"Lat: {new_hazard.latitude}, Lng: {new_hazard.longitude}",
+                    hazard_type=new_hazard.hazard_type
+                )
+            except Exception as e:
+                logger.error(f"❌ Failed to dispatch emergency alert: {e}", exc_info=True)
         
+        # Check report counts and award badges dynamically
+        try:
+            report_count_stmt = select(func.count(Hazard.id)).where(Hazard.user_id == user_id)
+            report_count_res = await db.execute(report_count_stmt)
+            total_reports = report_count_res.scalar() or 0
+
+            existing_badges_stmt = select(GamificationBadge.badge_name).where(GamificationBadge.user_id == user_id)
+            existing_badges_res = await db.execute(existing_badges_stmt)
+            existing_badge_names = set(existing_badges_res.scalars().all())
+
+            if total_reports >= 5 and "civic_sentinel" not in existing_badge_names:
+                await cls.award_badge(
+                    db=db,
+                    user_id=user_id,
+                    badge_name="civic_sentinel",
+                    points=100,
+                    description="Awarded for submitting 5 hazard reports."
+                )
+            
+            if total_reports >= 10 and "road_guardian_champion" not in existing_badge_names:
+                await cls.award_badge(
+                    db=db,
+                    user_id=user_id,
+                    badge_name="road_guardian_champion",
+                    points=200,
+                    description="Awarded for submitting 10 hazard reports."
+                )
+        except Exception as badge_err:
+            logger.warning(f"⚠️ Failed to evaluate gamification badges: {badge_err}")
+
         # Query database including selectinload options to satisfy relationship parsing
         stmt = (
             select(Hazard)
@@ -532,3 +575,37 @@ class HazardService:
         
         await db.commit()
         logger.info(f"✅ Verified hazard {hazard_id} and rewarded reporting user {hazard.user_id}.")
+
+    @classmethod
+    async def evaluate_sla_status(cls, db: AsyncSession) -> None:
+        """
+        Scans all unresolved hazards and logs warnings for approaching deadlines (<= 2 hours)
+        and flags/escalates breached deadlines (sla_deadline < now).
+        """
+        now = datetime.utcnow()
+        # Query unresolved hazards
+        stmt = select(Hazard).where(
+            and_(
+                Hazard.status != "resolved",
+                Hazard.status != "rejected"
+            )
+        )
+        res = await db.execute(stmt)
+        hazards = res.scalars().all()
+        
+        for h in hazards:
+            if h.sla_deadline:
+                time_remaining = h.sla_deadline - now
+                
+                # Check for breach
+                if now > h.sla_deadline:
+                    if not h.sla_breached:
+                        h.sla_breached = True
+                        logger.error("🚨 SLA BREACHED - Escalating!")
+                        logger.error(f"🚨 SLA BREACHED - Escalating! Hazard #{h.id} ({h.hazard_type}) at coordinates ({h.latitude}, {h.longitude}) is past its SLA deadline of {h.sla_deadline}.")
+                # Check for approaching deadline (<= 2 hours remaining, and not yet breached)
+                elif timedelta(hours=0) < time_remaining <= timedelta(hours=2):
+                    logger.warning("⏰ SLA deadline approaching: 2 hours")
+                    logger.warning(f"⏰ SLA deadline approaching: 2 hours remaining for Hazard #{h.id} ({h.hazard_type}) assigned to {h.linked_department}.")
+                    
+        await db.commit()

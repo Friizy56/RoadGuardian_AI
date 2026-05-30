@@ -94,6 +94,32 @@ class ContractorBidResponse(BaseModel):
     status: str = Field(..., description="Status of the bid (pending, accepted, rejected)")
     submitted_at: datetime = Field(..., description="Timestamp of bid submission")
 
+class SQLAlchemySafeWrapper:
+    def __init__(self, obj):
+        object.__setattr__(self, "_obj", obj)
+
+    def __getattr__(self, name):
+        from sqlalchemy.orm import attributes
+        try:
+            state = attributes.instance_state(self._obj)
+            if name in state.unloaded:
+                return None
+        except Exception:
+            pass
+        try:
+            return getattr(self._obj, name)
+        except AttributeError:
+            raise AttributeError(f"'{type(self._obj).__name__}' object has no attribute '{name}'")
+
+    def __setattr__(self, name, value):
+        if name == "_obj":
+            object.__setattr__(self, "_obj", value)
+        else:
+            try:
+                setattr(self._obj, name, value)
+            except AttributeError:
+                self.__dict__[name] = value
+
 class HazardResponse(BaseModel):
     """Schema representing serialized hazard models returned to clients"""
     model_config = ConfigDict(from_attributes=True)
@@ -114,7 +140,7 @@ class HazardResponse(BaseModel):
     assigned_at: Optional[datetime] = Field(None, description="Timestamp when the crew was assigned")
     resolved_image_url: Optional[str] = Field(None, description="URL of the resolution proof image")
     resolution_notes: Optional[str] = Field(None, description="Resolution notes explaining reparation")
-    resolved_by_id: Optional[int] = Field(None, description="User ID of the authority who resolved the report")
+    resolved_by_id: Optional[str] = Field(None, description="User ID of the authority who resolved the report")
     resolved_by_name: Optional[str] = Field(None, description="Name of the authority who resolved the report")
     reporter_name: Optional[str] = Field(None, description="Full name or credential of the reporting user")
     ai_analysis_available: bool = Field(True, description="Whether AI analysis was available for this report")
@@ -149,6 +175,7 @@ class HazardResponse(BaseModel):
                 else:
                     data["resolved_by_name"] = getattr(resolved_by, "full_name", None) or getattr(resolved_by, "email", None)
         else:
+            data = SQLAlchemySafeWrapper(data)
             user = getattr(data, "user", None)
             if user:
                 try:
@@ -253,3 +280,21 @@ class RecurringPatternsResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     recurring_hazards: List[RecurringPattern] = Field(..., description="Top recurring hazard patterns detected")
+
+
+class RecurringPatternReport(BaseModel):
+    """Schema representing a repeating hazard occurrence for the new /recurring-patterns endpoint"""
+    model_config = ConfigDict(from_attributes=True)
+
+    location: str = Field(..., description="Reverse geocoded location address")
+    hazard_type: str = Field(..., description="Type of repeating hazard")
+    occurrences: int = Field(..., description="Number of times this issue has recurring reports")
+    last_reported: str = Field(..., description="Last reported date in YYYY-MM-DD format")
+    suggested_action: str = Field(..., description="Recommended action for this pattern")
+
+
+class RecurringPatternsReportResponse(BaseModel):
+    """Schema representing recurring patterns report response"""
+    model_config = ConfigDict(from_attributes=True)
+
+    recurring_patterns: List[RecurringPatternReport] = Field(..., description="List of detected recurring patterns")

@@ -20,12 +20,24 @@ from app.database import get_db
 from typing import Any
 
 # ======================
-# Supabase Integration
+# Supabase Integration (lazy import)
 # ======================
-from supabase import create_client, Client
-
+# Import supabase lazily so the app can start even if the package or
+# optional realtime dependencies are missing in local dev environments.
 supabase_client = None
-if settings.SUPABASE_URL and settings.SUPABASE_ANON_KEY:
+create_client = None
+Client = None
+try:
+    from supabase import create_client as _create_client, Client as _Client
+    create_client = _create_client
+    Client = _Client
+except Exception as e:
+    # Supabase (or its transitive deps) may be unavailable in local/dev.
+    # We'll leave `create_client`/`Client` as None and only initialize
+    # the client if both the settings and the import are available.
+    print(f"Supabase import unavailable in auth dependencies: {e}")
+
+if create_client is not None and settings.SUPABASE_URL and settings.SUPABASE_ANON_KEY:
     try:
         supabase_client = create_client(settings.SUPABASE_URL, settings.SUPABASE_ANON_KEY)
     except Exception as e:
@@ -127,11 +139,12 @@ async def get_current_user(
         if any(keyword in email.lower() for keyword in ["president", "authority", "officer", ".gov", "roadguardian.gov.in"]):
             role = "authority"
             
+        import uuid
         user = User(
+            id=str(uuid.uuid4()),
             email=email,
             full_name=full_name,
             role=role,
-            hashed_password=get_password_hash("supa-oauth-bypass-pwd"),
             points=9999 if email == "president@roadguardian.gov.in" else 0
         )
         db.add(user)

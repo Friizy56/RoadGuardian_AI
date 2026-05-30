@@ -55,8 +55,8 @@ export const Report = () => {
     const finalDescription = (locString ? `[Locality: ${locString}] ` : '') + (transcript || '');
 
     setIsSubmitting(true);
+    let parsedType = 'other';
     try {
-      let parsedType = 'other';
       if (aiResult?.type) {
         const t = aiResult.type.toLowerCase();
         if (t.includes('pothole')) parsedType = 'pothole';
@@ -75,8 +75,10 @@ export const Report = () => {
       formData.append('longitude', String(finalLng));
 
       if (!navigator.onLine) {
+        let savedOffline = true;
+
         if (imageFile) {
-          await saveOfflineReport({
+          savedOffline = await saveOfflineReport({
             id: uuidv4(),
             type: 'image',
             latitude: String(finalLat),
@@ -84,18 +86,29 @@ export const Report = () => {
             hazard_type: parsedType,
             description: finalDescription,
             mediaBlob: imageFile,
+            mediaFilename: imageFile.name,
+            mediaMimeType: imageFile.type || 'image/jpeg',
             timestamp: Date.now()
           });
         } else if (audioBlob) {
-          await saveOfflineReport({
+          savedOffline = await saveOfflineReport({
             id: uuidv4(),
             type: 'voice',
             latitude: String(finalLat),
             longitude: String(finalLng),
             mediaBlob: audioBlob,
+            mediaFilename: 'voice_report.webm',
+            mediaMimeType: audioBlob.type || 'audio/webm',
             timestamp: Date.now()
           });
         }
+
+        if (!savedOffline) {
+          toast.error('Unable to save report offline. Please try again or check your browser storage settings.');
+          setIsSubmitting(false);
+          return;
+        }
+
         navigate('/dashboard');
         return;
       }
@@ -136,36 +149,42 @@ export const Report = () => {
       
       if (isNetworkError) {
         // Backend is unreachable — save offline so user's work isn't lost
-        try {
-          if (imageFile) {
-            await saveOfflineReport({
-              id: uuidv4(),
-              type: 'image',
-              latitude: String(finalLat),
-              longitude: String(finalLng),
-              hazard_type: parsedType,
-              description: finalDescription,
-              mediaBlob: imageFile,
-              timestamp: Date.now()
-            });
-          } else if (audioBlob) {
-            await saveOfflineReport({
-              id: uuidv4(),
-              type: 'voice',
-              latitude: String(finalLat),
-              longitude: String(finalLng),
-              mediaBlob: audioBlob,
-              timestamp: Date.now()
-            });
-          }
-          toast.success('Backend unavailable — report saved offline. It will sync automatically when the server is back.');
-          navigate('/dashboard');
-          return;
-        } catch (offlineErr) {
-          console.error("Offline save also failed", offlineErr);
-          toast.error("Backend is unreachable and offline save failed. Please check your connection and try again.");
+        let savedOffline = true;
+
+        if (imageFile) {
+          savedOffline = await saveOfflineReport({
+            id: uuidv4(),
+            type: 'image',
+            latitude: String(finalLat),
+            longitude: String(finalLng),
+            hazard_type: parsedType,
+            description: finalDescription,
+            mediaBlob: imageFile,
+            mediaFilename: imageFile.name,
+            mediaMimeType: imageFile.type || 'image/jpeg',
+            timestamp: Date.now()
+          });
+        } else if (audioBlob) {
+          savedOffline = await saveOfflineReport({
+            id: uuidv4(),
+            type: 'voice',
+            latitude: String(finalLat),
+            longitude: String(finalLng),
+            mediaBlob: audioBlob,
+            mediaFilename: 'voice_report.webm',
+            mediaMimeType: audioBlob.type || 'audio/webm',
+            timestamp: Date.now()
+          });
+        }
+
+        if (!savedOffline) {
+          toast.error('Backend is unreachable and offline save failed. Please check your connection and try again.');
           return;
         }
+
+        toast.success('Backend unavailable — report saved offline. It will sync automatically when the server is back.');
+        navigate('/dashboard');
+        return;
       }
       
       // Backend responded with an error — show a specific message

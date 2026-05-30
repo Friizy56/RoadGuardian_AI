@@ -79,6 +79,10 @@ export default defineConfig(({ command }) => ({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  server: {
+    host: 'localhost',
+    port: 5173,
+  },
   build: {
     outDir: path.resolve(__dirname, '../roadguardian-backend/static'),
     emptyOutDir: true,

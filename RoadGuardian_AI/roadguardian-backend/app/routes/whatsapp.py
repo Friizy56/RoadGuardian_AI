@@ -65,15 +65,20 @@ async def twilio_webhook(
             lng = 80.2707
         
         # 1. Lookup or create proxy user
-        proxy_email = f"{From.replace('+', '')}@whatsapp.roadguardian.gov"
+        clean_from = From.replace("whatsapp:", "").replace("+", "")
+        proxy_email = f"{clean_from}@whatsapp.roadguardian.gov"
         user_res = await db.execute(select(User).where(User.email == proxy_email))
         user = user_res.scalar_one_or_none()
         
         if not user:
+            import uuid
+            clean_phone = From.replace("whatsapp:", "")
+            if not clean_phone.startswith("+"):
+                clean_phone = "+" + clean_phone
             user = User(
+                id=str(uuid.uuid4()),
                 email=proxy_email,
-                hashed_password="whatsapp_proxy",
-                full_name=f"WhatsApp Citizen ({From})",
+                full_name=f"WhatsApp Citizen ({clean_phone})",
                 role="citizen"
             )
             db.add(user)
@@ -138,9 +143,12 @@ async def twilio_webhook(
         logger.error(f"❌ Error processing WhatsApp message: {e}", exc_info=True)
         message_text = f"❌ Error: {str(e)[:80]}"
 
+    import html
+    escaped_message_text = html.escape(message_text)
+
     # 5. Return TwiML format response
     twiml = f"""<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-    <Message>{message_text}</Message>
+    <Message>{escaped_message_text}</Message>
 </Response>"""
     return Response(content=twiml, media_type="application/xml")
