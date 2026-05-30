@@ -1,62 +1,203 @@
-# Python
+################################################################################
+# COMPREHENSIVE GITIGNORE FOR ROADGUARDIAN AI PROJECT
+################################################################################
+
+# ============================================================================
+# PYTHON - Virtual Environments & Dependencies
+# ============================================================================
+.venv/
+.venv_py311/
+.venv_py310/
+.venv_py39/
+venv/
+env/
+ENV/
+.env/
+python_env/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Python Cache & Build
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+*.egg
+*.egg-info/
+.eggs/
+dist/
 build/
 develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
+.installed.cfg
+*.egg-link
 parts/
 sdist/
 var/
 wheels/
-*.egg-info/
-.installed.cfg
-*.egg
+pip-wheel-metadata/
+*.pyc
+*.pyo
+*.pyd
+.dmypy.json
+dmypy.json
 
-# Virtual environments
-.venv/
-.venv_py311/
-venv/
-env/
-ENV/
+# ============================================================================
+# NODE.JS / FRONTEND - Dependencies & Build Outputs
+# ============================================================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnp
+.pnp.js
+dist/
+.cache/
+.eslintcache
+.next
+.nuxt
+out/
 
-# IDE
+# ============================================================================
+# IDE & EDITOR
+# ============================================================================
 .vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
 .idea/
-*.swp
+.idea_modules/
+*.sublime-project
+*.sublime-workspace
+*.code-workspace
+.swp
 *.swo
-
-# OS
+*~
 .DS_Store
 Thumbs.db
+.project
+.pydevproject
+.settings
+*.sublime-project
+*.sublime-workspace
 
-# Test coverage
-.coverage
-htmlcov/
-
-# Environment variables
-.env
-.env.local
-
-# Node modules (for frontend)
-node_modules/
-.npmrc
-
-# Build outputs
-dist/
-build/
-
-# Database
+# ============================================================================
+# DATABASE & LOCAL FILES
+# ============================================================================
 *.db
 *.sqlite
 *.sqlite3
+*.sqlite-journal
+.env
+.env.local
+.env.*.local
+.env.production.local
 
-# Uploads
+# ============================================================================
+# TESTING & COVERAGE
+# ============================================================================
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.tox/
+.hypothesis/
+*.cover
+.hypothesis
+.pytest_cache
+
+# ============================================================================
+# OPERATING SYSTEM FILES
+# ============================================================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# ============================================================================
+# LOGS & TEMP FILES
+# ============================================================================
+*.log
+*.logs
+logs/
+*.tmp
+*.temp
+temp/
+tmp/
+
+# ============================================================================
+# OS SPECIFIC
+# ============================================================================
+# Windows
+*.bat
+*.cmd
+*.exe
+*.dll
+*.pyd
+# Mac
+.AppleDouble
+.LSOverride
+# Linux
+.directory
+
+# ============================================================================
+# PROJECT SPECIFIC - Uploads & Generated Files
+# ============================================================================
 uploads/
+downloads/
+models/yolov8n.pt
+static/
+!static/.gitkeep
+
+# ============================================================================
+# CI/CD & Deployment
+# ============================================================================
+.github/workflows/temp/
+.gitlab-ci.yml.bak
+.circleci/
+*.pem
+*.key
+*.jks
+
+# ============================================================================
+# NGROK & TUNNELING
+# ============================================================================
+ngrok
+ngrok.exe
+.ngrok*
+
+# ============================================================================
+# DOCKER
+# ============================================================================
+.docker/
+docker-compose.override.yml
+
+# ============================================================================
+# MISC FILES - Should not be committed
+# ============================================================================
+.vscode-upload
+.env.backup
+.backup
+*.bak
+*.backup
+.config.json
+config.local.json
+settings.local.json
+
+# ============================================================================
+# IMPORTANT: Only these should be committed
+# ============================================================================
+# ✅ Source Code
+# ✅ Configuration Files (package.json, requirements.txt, etc.)
+# ✅ README & Documentation
+# ✅ Environment Templates (.env.example)
+# ✅ Docker Files & Compose
+# ✅ GitHub Actions & CI/CD Configs
