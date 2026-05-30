@@ -119,7 +119,7 @@ export const WhatsAppSimulator = () => {
             <input 
               type="text" 
               placeholder="Type a message" 
-              className="flex-1 rounded-full px-4 py-2 text-sm border-none focus:ring-0 outline-none"
+              className="flex-1 rounded-full px-4 py-2 text-sm border-none focus:ring-0 outline-none text-slate-900 bg-white"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               disabled={isLoading}
